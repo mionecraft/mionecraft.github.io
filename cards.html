@@ -156,7 +156,7 @@ function spotRow(s,dist){
   const anyOk=cs.some(x=>x.k==="ok");
   return `<div class="row${anyOk?" best":""}"><div class="top"><span class="c">${esc(s.이름)}</span>${dist!=null?`<span class="dist">${dist<1?Math.round(dist*1000)+"m":dist.toFixed(1)+"km"}</span>`:""}</div>
     <div class="k">${esc(s.종류==="호텔 발렛"?"호텔 무료 발렛 (영수증 필요)":"1일 무료주차")} · ${esc(s.주소)} · <a class="map" href="${kakao(s.이름)}" target="_blank" rel="noopener">지도</a></div>
-    ${rec?`<div class="k">영수증 <b>${esc(rec)}</b> 이상</div>`:""}
+    ${rec?`<div class="k">호텔 영수증 <b>${esc(rec)}</b> 있어야 함</div>`:""}
     <div class="cardline">${cs.map(x=>`<span class="cl ${x.k}">${esc(NAME[x.c])} · ${esc(x.t)}</span>`).join("")}</div></div>`;
 }
 const REGION_ORDER=["서울","경기","인천","부산","대구","대전","울산","광주","강원","충남","전북","전남","경북","경남","제주"];
