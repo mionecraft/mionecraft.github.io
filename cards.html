@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1D2752">
+<title>내 카드 혜택</title>
+<style>
+:root{--bg:#FFF6E9;--card:#fff;--ink:#1D2752;--sub:#6B7794;--line:#1D2752;--accent:#F0503C;--gold:#C9A227;--soft:#F6E7CF;--ok:#1E8E5A;--okbg:#E4F5EC}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,"Apple SD Gothic Neo","Pretendard","Noto Sans KR",system-ui,sans-serif;font-size:15px;line-height:1.5;padding-bottom:60px}
+header{padding:22px 16px 14px;border-bottom:3px solid var(--line)}
+h1{margin:0;font-size:24px;letter-spacing:-.6px}
+h1 span{color:var(--accent)}
+.meta{color:var(--sub);font-size:12.5px;margin-top:4px}
+section{padding:18px 14px 4px}
+h2{font-size:18px;margin:0 0 10px;letter-spacing:-.4px}
+h2::after{content:"";display:block;width:56px;height:6px;margin-top:5px;background:repeating-linear-gradient(90deg,var(--gold) 0 6px,transparent 6px 12px)}
+/* 실적 스위치 */
+.mycards{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mc{background:#fff;border:3px solid var(--line);border-radius:14px;padding:9px 10px}
+.mc .n{font-weight:800;font-size:14px}
+.mc .s{font-size:11.5px;color:var(--sub)}
+.mc select{margin-top:6px;width:100%;font:inherit;font-size:13px;padding:5px 6px;border:2px solid var(--line);border-radius:9px;background:var(--soft);color:var(--ink)}
+/* 행사 */
+.ev{display:flex;gap:10px;align-items:center;background:#fff;border:3px solid var(--line);border-radius:14px;padding:9px 11px;margin-bottom:8px;text-decoration:none;color:inherit}
+.dd{flex:0 0 54px;text-align:center;font-weight:900;font-size:15px;border-radius:10px;padding:6px 0;background:var(--soft)}
+.dd.hot{background:var(--accent);color:#fff}
+.ev .t{font-weight:700;font-size:13.5px}
+.ev .x{font-size:12px;color:var(--sub)}
+.pill{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 8px;border-radius:999px;margin-right:4px;background:var(--soft)}
+.pill.req{background:#FFE3DE;color:#B4321F}
+.pill.done{background:var(--okbg);color:var(--ok)}
+/* 검색 */
+.searchbox{position:sticky;top:0;z-index:9;background:rgba(255,246,233,.97);backdrop-filter:blur(8px);padding:10px 14px 8px;border-bottom:2px solid var(--line)}
+.searchbox input{width:100%;font:inherit;font-size:16px;padding:11px 13px;border:3px solid var(--line);border-radius:13px;background:#fff;color:var(--ink);outline:none}
+.chips{margin-top:8px;overflow-x:auto;white-space:nowrap;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{display:inline-block;padding:5px 12px;margin-right:6px;border-radius:999px;background:var(--soft);font-size:13px;font-weight:700;border:2px solid transparent}
+.chip.on{background:var(--ink);color:#fff}
+.res .grp{margin-bottom:16px}
+.res h3{font-size:15px;margin:0 0 7px;padding-left:9px;border-left:5px solid var(--line)}
+.row{background:#fff;border:3px solid var(--line);border-radius:14px;padding:9px 11px;margin-bottom:7px}
+.row.no{opacity:.45;border-style:dashed}
+.row .top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.row .c{font-weight:900;font-size:14.5px}
+.row .badge{font-size:11.5px;font-weight:800;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.badge.ok{background:var(--okbg);color:var(--ok)}
+.badge.ng{background:#FFE3DE;color:#B4321F}
+.badge.q{background:var(--soft);color:var(--sub)}
+.row .d{font-size:13.5px;margin-top:3px}
+.row .k{font-size:12.5px;color:var(--sub);margin-top:3px}
+.row .k b{color:var(--ink)}
+.best{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}
+.best .c::before{content:"★ ";color:var(--accent)}
+.empty{color:var(--sub);font-size:13.5px;padding:10px 2px}
+.foot{color:var(--sub);font-size:12px;padding:16px 14px;line-height:1.6}
+.foot a{color:var(--ink)}
+</style>
+</head>
+<body>
+<header>
+  <h1>내 카드 <span>혜택</span></h1>
+  <div class="meta">카드 4장 · 혜택 기준일 <b id="asof"></b> · 공식 안내장 기준</div>
+</header>
+
+<section>
+  <h2>이번 달 실적 (지난달 쓴 금액)</h2>
+  <div class="mycards" id="mycards"></div>
+</section>
+
+<section>
+  <h2>지금 진행 중인 행사</h2>
+  <div id="events"></div>
+</section>
+
+<div class="searchbox">
+  <input id="q" type="search" placeholder="호텔 이름이나 상황을 입력 (예: 드래곤시티, 라운지, 택시)" autocomplete="off">
+  <div class="chips" id="chips"></div>
+</div>
+<section class="res" id="res"></section>
+
+<div class="foot" id="foot"></div>
+
+<script>
+const D = {"기준일": "2026-11-06", "cards": {"KB": {"이름": "KB 헤리티지 Smart (대한항공 마일리지형)", "브랜드": "Mastercard World", "연회비": "20만원", "출처": "KB국민카드 상품페이지 · Mastercard World 04 선택서비스 상품설명서(2026-05-11)"}, "신한": {"이름": "신한 RPM Platinum#", "브랜드": "JCB Platinum", "연회비": "2만7천원", "출처": "신한카드 상품페이지 · JCB Platinum 선택서비스 유형1(260511) · JCB Platinum 공통서비스"}, "삼성": {"이름": "삼성 THE 1", "브랜드": "AMEX Platinum Elite", "연회비": "20만원(해외겸용) · 신규발급 중단, 갱신만 가능", "출처": "삼성카드 상품페이지 · 아멕스 PLATINUM ELITE 안내장(2604_AMEX_E_002)"}, "롯데": {"이름": "롯데 힐튼 아너스 아멕스 프리미엄", "브랜드": "AMEX Platinum Elite", "연회비": "50만원(해외겸용)", "출처": "롯데카드 상품페이지 · AMEX PLATINUM ELITE 04 선택서비스(2026)"}}, "hotel_valet": {"KB": {"횟수": "호텔 합쳐 월 5회 · 연 15회 (가족카드 합산)", "전월실적": "50만원", "무료주차": "3시간 포함(일부 호텔 제외)", "주의": "호텔 영업장 영수증 필요 · 첫 사용등록~다음달 말은 실적 없어도 됨", "호텔": ["앰배서더 서울 풀만", "그랜드 워커힐 서울", "그랜드 하얏트 서울", "노보텔 앰배서더 서울 강남", "노보텔 앰배서더 서울 동대문", "더 플라자", "레스케이프 서울 명동", "르메르디앙 서울 명동", "메리어트 이그제큐티브 아파트먼트 서울", "메이필드 호텔", "몬드리안 서울 이태원", "반얀트리 클럽 앤 스파 서울", "비스타 워커힐 서울", "서울 드래곤 시티", "서울 가든 호텔", "스위스 그랜드 호텔", "오크우드 프리미어 코엑스 센터", "코트야드 메리어트 서울 타임스퀘어", "콘래드 서울", "파크 하얏트 서울", "서울신라호텔", "호텔 코리아나", "글래드 강남 코엑스 센터", "JW 메리어트 동대문 스퀘어 서울", "JW 메리어트 호텔 서울", "JW 메리어트 제주", "그랜드 머큐어 앰배서더 창원", "그랜드 하얏트 인천", "대구 메리어트 호텔", "소노캄 고양", "소노캄 여수", "파라다이스호텔 부산", "파라다이스시티", "파크 하얏트 부산", "세인트존스 호텔", "호텔 오노마 대전", "호텔 인터불고 대구", "힐튼 경주"], "영수증금액": {"레스케이프 서울 명동": "3만원↑", "몬드리안 서울 이태원": "2.5만원↑", "파크 하얏트 서울": "2만원↑", "호텔 코리아나": "2.5만원↑", "JW 메리어트 동대문 스퀘어 서울": "3만원↑", "JW 메리어트 호텔 서울": "5만원↑"}}, "삼성": {"횟수": "호텔별 월 5회", "전월실적": "30만원", "무료주차": "3시간", "주의": "당일 객실·식음료 영수증 필요 · 발급월+1개월은 실적 무관", "호텔": ["그랜드 워커힐 서울", "그랜드 하얏트 서울", "노보텔 앰배서더 서울 강남", "노보텔 앰배서더 서울 동대문", "더 플라자", "르메르디앙 서울 명동", "메이필드 호텔", "반얀트리 클럽 앤 스파 서울", "서울 가든 호텔", "비스타 워커힐 서울", "서울 드래곤 시티", "서울신라호텔", "아셈타워", "앰배서더 서울 풀만", "코트야드 메리어트 서울 타임스퀘어", "힐튼 가든 인 서울 강남", "JW 메리어트 동대문 스퀘어 서울", "JW 메리어트 호텔 서울", "그랜드 조선 부산", "대구 메리어트 호텔", "파크 하얏트 부산", "호텔 인터불고 대구", "힐튼 경주"], "영수증금액": {"JW 메리어트 호텔 서울": "5만원↑"}}, "신한": {"횟수": "호텔별 월 3회", "전월실적": "없음", "무료주차": "2~3시간", "주의": "당일 객실·매장 영수증 필요", "호텔": ["앰배서더 서울 풀만", "노보텔 앰배서더 서울 강남", "노보텔 앰배서더 서울 동대문", "더 플라자", "서울 드래곤 시티", "몬드리안 서울 이태원", "메이필드 호텔", "반얀트리 클럽 앤 스파 서울", "서울 가든 호텔", "코트야드 메리어트 서울 타임스퀘어", "호텔 오노마 대전", "호텔 인터불고 대구", "그랜드 머큐어 앰배서더 창원"], "영수증금액": {}}, "롯데": {"횟수": "월 3회 · 연 12회", "전월실적": "50만원", "무료주차": "3시간 (힐튼 가든 인 강남은 4시간)", "주의": "영업장 영수증 요구될 수 있음", "호텔": ["콘래드 서울", "힐튼 가든 인 서울 강남", "더블트리 바이 힐튼 서울 판교", "힐튼 경주", "인스파이어 엔터테인먼트 리조트"], "영수증금액": {}}}, "benefits": [{"상황": "인천공항 발렛", "카드": "삼성", "내용": "무료 발렛 (주차요금 별도)", "횟수": "통합 월 5회", "전월실적": "30만원", "방법": "사전예약 · T1 maxerve-mparking.com/valet · T2 valet.amanopark.co.kr"}, {"상황": "인천공항 발렛", "카드": "KB", "내용": "무료 발렛 (주차요금 별도, 일반 주차대행만)", "횟수": "월 3회 · 연 5회", "전월실적": "50만원", "방법": "사전예약"}, {"상황": "인천공항 발렛", "카드": "신한", "내용": "무료 발렛 (주차요금 별도)", "횟수": "월 3회", "전월실적": "없음", "방법": "사전예약 · T1 maxerve-mparking.com/valet"}, {"상황": "인천공항 발렛", "카드": "롯데", "내용": "제공 안 함", "횟수": "-", "전월실적": "-", "방법": "-"}, {"상황": "국내 공항 라운지", "카드": "KB", "내용": "인천 T1 스카이허브 · T2 마티나/마티나골드 · 김포·김해 스카이허브 본인 무료", "횟수": "연 3회 (가족 합산) · 하루 1회", "전월실적": "50만원", "방법": "탑승권+카드 제시"}, {"상황": "국내 공항 라운지", "카드": "신한", "내용": "인천 T1 마티나 · T2 스카이허브·마티나 · 김포 스카이허브 본인 무료", "횟수": "연 2회", "전월실적": "없음", "방법": "탑승권+여권+카드 · 영문 이름 일치 · 동반자는 유료"}, {"상황": "국내 공항 라운지", "카드": "삼성", "내용": "인천 마티나(T1 동/서, T2) 본인 무료 · 동반 2인까지 30% 할인", "횟수": "하루 1회 · 연 2회", "전월실적": "30만원", "방법": "탑승권+여권+카드"}, {"상황": "해외·국내 라운지 (더라운지 앱)", "카드": "롯데", "내용": "전세계 라운지 본인+동반 1인 무료 (2명 쓰면 2회 차감)", "횟수": "연 4회", "전월실적": "50만원 · 발급한 달 제외", "방법": "더라운지 앱에 카드 등록 → 이용권 발급"}, {"상황": "해외·국내 라운지 (더라운지 앱)", "카드": "KB", "내용": "전세계 1,300여 라운지 무료", "횟수": "연 10회 (가족 합산)", "전월실적": "50만원", "방법": "더라운지 앱 등록 → 이용권(24시간 유효)"}, {"상황": "일본 공항 라운지", "카드": "신한", "내용": "나리타 IASS · 하네다 POWER LOUNGE 등 본인 무료", "횟수": "일본·하와이 연 6회", "전월실적": "없음", "방법": "카드+당일 탑승권"}, {"상황": "공항 커피", "카드": "삼성", "내용": "인천·김포 지정 매장 핫 아메리카노(S) 1잔", "횟수": "하루 1회", "전월실적": "확인 필요(안내장 배치가 모호)", "방법": "본인 탑승권+카드"}, {"상황": "공항 커피", "카드": "롯데", "내용": "인천·김포 지정 매장 핫 아메리카노(S) 1잔", "횟수": "월 1회 · 연 12회", "전월실적": "50만원", "방법": "본인 탑승권+카드"}, {"상황": "공항 커피", "카드": "신한", "내용": "인천공항 면세구역 아메리카노", "횟수": "월 1회(2잔) · 연 6회(12잔)", "전월실적": "전월 이용 있으면", "방법": "탑승권+카드"}, {"상황": "공항 리무진·공항철도", "카드": "롯데", "내용": "편도 티켓 무료 (50만원↑ 항공권을 이 카드로 산 경우)", "횟수": "월 1회 · 연 2회", "전월실적": "50만원", "방법": "e티켓+카드 제시 · 공항철도는 앱/홈페이지만"}, {"상황": "공항 리무진·공항철도", "카드": "삼성", "내용": "편도 티켓 무료 (50만원↑ 항공권을 이 카드로 산 경우)", "횟수": "확인 필요", "전월실적": "확인 필요", "방법": "e티켓+카드 제시"}, {"상황": "인천공항 주차요금", "카드": "삼성", "내용": "3만원↑ 결제 시 1만원 청구할인", "횟수": "월 1회 · 연 4회", "전월실적": "30만원", "방법": "주차요금을 이 카드로 결제"}, {"상황": "KTX역·도심 무료주차", "카드": "삼성", "내용": "서울역·광명역·대전·울산역·광주송정 등 17곳 1일 무료", "횟수": "하루 1회 · 월 3회 · 연 12회", "전월실적": "30만원", "방법": "출차 때 무인정산기에 카드 삽입"}, {"상황": "KTX역·도심 무료주차", "카드": "신한", "내용": "도심·KTX 지정 주차장 1일 무료", "횟수": "월 3회", "전월실적": "전월 이용 있으면", "방법": "출차 때 카드 제시"}, {"상황": "일반 주차 할인", "카드": "삼성·롯데(아멕스)", "내용": "하이파킹 지정 주차장 20% 할인", "횟수": "-", "전월실적": "없음", "방법": "아멕스 카드로 결제"}, {"상황": "택시", "카드": "삼성", "내용": "1만원↑ 2천원 청구할인", "횟수": "월 1회 · 연 6회", "전월실적": "30만원", "방법": "-"}, {"상황": "택시 (일본 GO 앱)", "카드": "신한", "내용": "JCBig ¥3,000↑ 20%, 최대 ¥1,000", "횟수": "차수당 1회", "전월실적": "없음", "방법": "응모 필수 · GO 앱에 카드 등록 · 12/31까지"}, {"상황": "스타벅스", "카드": "삼성", "내용": "1만원↑ 2천원 청구할인", "횟수": "월 2회 · 연 12회", "전월실적": "30만원", "방법": "-"}, {"상황": "호텔 식사 할인", "카드": "롯데", "내용": "콘래드·더블트리 판교 레스토랑 6만원↑ 3만원 / 델리 4만원↑ 2만원 (Be My Guest)", "횟수": "월 1회 · 연 4회", "전월실적": "50만원", "방법": "결제 전 말하고 카드 제시"}, {"상황": "호텔 객실·식사 할인", "카드": "KB", "내용": "마스터카드 호텔 컬렉션: 특급호텔 F&B 10%, 객실 5~40% 등", "횟수": "-", "전월실적": "없음", "방법": "직접 예약 후 현장 결제"}, {"상황": "호텔 객실·식사 할인", "카드": "삼성·롯데(아멕스)", "내용": "국내 특급호텔 객실 5~40% · F&B 5~10% (34곳)", "횟수": "-", "전월실적": "없음", "방법": "호텔 예약실에 아멕스 할인 요청"}, {"상황": "고택 숙박", "카드": "삼성·롯데(아멕스)", "내용": "안동 구름에 2박 → 1박 무료 · 조선왕가 10~20% · 락고재 10%", "횟수": "-", "전월실적": "없음", "방법": "전화 예약 때 아멕스 혜택 요청"}, {"상황": "연 1회 바우처", "카드": "삼성", "내용": "15만원 택1: 신세계상품권 · 대한항공 15만원 할인 · 호텔 식사권 · 삼성카드여행 15만원", "횟수": "연 1회 (미신청 시 소멸)", "전월실적": "첫해 50만원 / 다음해부터 전년 600만원", "방법": "삼성카드 앱 → 내 카드 혜택"}, {"상황": "연 1회 바우처", "카드": "KB", "내용": "15만원 택1: 특급호텔 · 항공 · 공연·전시 할인 쿠폰", "횟수": "연 1회", "전월실적": "첫해 50만원 / 다음해부터 연 600만원", "방법": "KB Pay·홈페이지 신청"}, {"상황": "호텔 무료 숙박", "카드": "롯데", "내용": "전세계 힐튼 주말(금·토·일) 무료 숙박권 2매 · 스탠다드 2인", "횟수": "연 1회 · 발행 후 12개월", "전월실적": "지난 연회비 주기 2,400만원", "방법": "힐튼 아너스 고객센터 080-682-0882로 예약"}, {"상황": "호텔 등급", "카드": "롯데", "내용": "힐튼 골드 자동 · 연 2,400만원↑이면 다이아몬드", "횟수": "-", "전월실적": "-", "방법": "-"}, {"상황": "평소 결제 적립", "카드": "KB", "내용": "국내 1천원당 1마일 · 해외 1천원당 2마일 (대한항공)", "횟수": "한도 없음", "전월실적": "없음", "방법": "-"}, {"상황": "평소 결제 적립", "카드": "KB", "내용": "KB Pay 결제 시 2천원당 1마일 추가", "횟수": "월 최대 2천마일", "전월실적": "50만원", "방법": "KB Pay로 결제"}, {"상황": "평소 결제 적립", "카드": "삼성", "내용": "국내 1% · 백화점·여행·호텔·골프·해외 1.5% 빅포인트", "횟수": "한도 없음", "전월실적": "없음", "방법": "-"}, {"상황": "평소 결제 적립", "카드": "롯데", "내용": "1,500원당 힐튼 포인트: 국내 2 · 면세점·대한/아시아나 6 · 해외·힐튼 8", "횟수": "한도 없음", "전월실적": "없음", "방법": "L.POINT 적립 안 됨 · 택시·대중교통 적립 제외"}, {"상황": "평소 결제 적립", "카드": "신한", "내용": "일반 0.2~2% · 백화점·마트·정비 1~5% (전월 구간별)", "횟수": "월 5만P", "전월실적": "50만원 미만 0.2% ~ 150만원↑ 2%", "방법": "-"}, {"상황": "주유", "카드": "신한", "내용": "주유소 리터당 100원 · 충전소 30원", "횟수": "월 4회 · 30만원까지", "전월실적": "없음", "방법": "-"}, {"상황": "일본 돈키호테", "카드": "신한", "내용": "JCBig ¥15,000↑ 20% 최대 ¥3,000 + JCB 월 ¥20,000↑ ¥1,000", "횟수": "차수당 1회", "전월실적": "없음", "방법": "JCBig 응모 필수(12/31까지) · 아사쿠사 EKIMISE점 제외"}, {"상황": "일본 대중교통", "카드": "신한", "내용": "도에이·도쿄메트로 터치결제 10%", "횟수": "월 최대 ¥500", "전월실적": "없음", "방법": "카드에 터치 마크 있어야 함"}, {"상황": "영화", "카드": "신한", "내용": "CGV·메가박스 온라인 예매 최대 3천원", "횟수": "월 6회 · 연 15회", "전월실적": "30만원", "방법": "온라인 예매"}, {"상황": "놀이공원", "카드": "신한", "내용": "에버랜드·롯데월드·서울랜드 50% · 캐리비안베이 30%", "횟수": "곳별 연 3회", "전월실적": "30만원", "방법": "매표소에서 카드 결제"}], "events": [{"카드": "신한", "행사": "JCBig 3차 일본 20% 캐시백 (돈키호테·스시로·GO·한큐한신·코메다)", "마감": "2026-12-31", "응모": "필수", "링크": "https://www.specialoffers.jcb/kr/campaign/detail/2026JCBig/92971/"}, {"카드": "KB", "행사": "해외 이용 합계 구간 상품권", "마감": "2026-11-08", "응모": "완료", "링크": ""}, {"카드": "KB", "행사": "쿠라스시·스시로·이치란 5만원↑ 신세계 2만원", "마감": "2026-11-30", "응모": "완료", "링크": ""}, {"카드": "KB", "행사": "해외 합산 800달러↑ 인천공항 식사권", "마감": "2026-11-30", "응모": "확인 필요", "링크": "http://www.newsdream.kr/news/articleView.html?idxno=70136"}, {"카드": "KB", "행사": "마스터 전용 클룩 액티비티 최대 20%", "마감": "2026-11-30", "응모": "전용 페이지", "링크": "http://www.newsdream.kr/news/articleView.html?idxno=70136"}, {"카드": "삼성·롯데", "행사": "마이아멕스쇼핑 직구 캐시백", "마감": "상시", "응모": "사이트 경유", "링크": "https://www.americanexpress.com/ko-kr/network/benefits/offers/"}]};
+const CARD_ORDER = ["신한","삼성","KB","롯데"];
+const LEVELS = [["0","30만원 미만"],["30","30만~50만원"],["50","50만원 이상"]];
+const store = {get(k,d){try{const v=localStorage.getItem(k);return v===null?d:v}catch(e){return d}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+const spend = {}; CARD_ORDER.forEach(c=>spend[c]=store.get("spend_"+c,"50"));
+
+// 전월실적 문구 → 필요한 금액(만원). 숫자를 못 읽으면 null(확인 필요)
+function need(txt){
+  if(!txt||txt==="-") return null;
+  if(/없음|전월 이용 있으면/.test(txt)) return 0;
+  if(/확인 필요/.test(txt)) return null;
+  if(/전년|연회비 주기|첫해|구간/.test(txt)) return null;
+  const m=txt.match(/(\d+)만원/); return m?parseInt(m[1],10):null;
+}
+function cardsOf(c){return c.split("·").map(s=>s.replace(/\(.*\)/,"").trim()).filter(Boolean)}
+function judge(card,txt){
+  const n=need(txt); if(n===null) return ["q","조건 확인"];
+  if(n===0) return ["ok","실적 무관"];
+  return parseInt(spend[card],10)>=n?["ok","지금 가능"]:["ng",n+"만원 필요"];
+}
+const esc=s=>String(s).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[m]));
+
+// 내 카드
+function drawCards(){
+  document.getElementById("mycards").innerHTML = CARD_ORDER.map(c=>{
+    const o=D.cards[c];
+    return `<div class="mc"><div class="n">${esc(c)}</div><div class="s">${esc(o.이름.replace(/^\S+\s/,""))} · ${esc(o.브랜드)}</div>
+    <select data-c="${esc(c)}">${LEVELS.map(([v,t])=>`<option value="${v}"${spend[c]===v?" selected":""}>${t}</option>`).join("")}</select></div>`}).join("");
+  document.querySelectorAll("#mycards select").forEach(s=>s.onchange=()=>{spend[s.dataset.c]=s.value;store.set("spend_"+s.dataset.c,s.value);search()});
+}
+
+// 행사 (마감 지난 건 자동으로 숨김)
+function drawEvents(){
+  const today=new Date();today.setHours(0,0,0,0);
+  const list=D.events.map(e=>{
+    let days=null; if(/^\d{4}-\d{2}-\d{2}$/.test(e.마감)){const d=new Date(e.마감+"T00:00:00");days=Math.round((d-today)/864e5)}
+    return {...e,days};
+  }).filter(e=>e.days===null||e.days>=0).sort((a,b)=>(a.days??9999)-(b.days??9999));
+  document.getElementById("events").innerHTML = list.length?list.map(e=>{
+    const dd=e.days===null?"상시":(e.days===0?"오늘":"D-"+e.days);
+    const cls=/필수/.test(e.응모)?"req":/완료/.test(e.응모)?"done":"";
+    const tag=e.링크?"a":"div";
+    return `<${tag} class="ev"${e.링크?` href="${esc(e.링크)}" target="_blank" rel="noopener"`:""}><div class="dd${e.days!==null&&e.days<=7?" hot":""}">${dd}</div>
+      <div><div class="t">${esc(e.행사)}</div><div class="x"><span class="pill">${esc(e.카드)}</span><span class="pill ${cls}">응모 ${esc(e.응모)}</span>${e.마감!=="상시"?esc(e.마감.slice(5).replace("-","/"))+" 마감":""}</div></div></${tag}>`}).join(""):`<div class="empty">진행 중인 행사가 없어요.</div>`;
+}
+
+// 검색 재료 만들기
+const norm=s=>s.replace(/\s+/g,"").toLowerCase();
+const HOTELS={}; // 호텔 → [{card,...}]
+Object.entries(D.hotel_valet).forEach(([card,v])=>v.호텔.forEach(h=>{(HOTELS[h]=HOTELS[h]||[]).push(card)}));
+const SITUS=[...new Set(D.benefits.map(b=>b.상황))];
+const CHIPS=["호텔 발렛","인천공항 발렛","라운지","공항 커피","주차","택시","스타벅스","바우처","적립","일본","호텔 할인"];
+const ALIAS={"발렛":"발렛","발레":"발렛","발레파킹":"발렛","라운지":"라운지","커피":"커피","주차":"주차","택시":"택시","적립":"적립","마일":"적립","포인트":"적립","일본":"일본","돈키":"돈키호테","리무진":"리무진","공항철도":"리무진","숙박":"숙박","기프트":"바우처","상품권":"바우처","쿠폰":"바우처"};
+
+function hotelBlock(h){
+  const cards=CARD_ORDER.map(c=>{
+    const v=D.hotel_valet[c]; const has=v.호텔.includes(h);
+    if(!has) return {c,has,html:`<div class="row no"><div class="top"><span class="c">${esc(c)}</span><span class="badge q">이 호텔 안 됨</span></div></div>`};
+    const [k,t]=judge(c,v.전월실적); const rec=v.영수증금액[h];
+    return {c,has,ok:k==="ok",html:(cls)=>`<div class="row ${cls}"><div class="top"><span class="c">${esc(c)}</span><span class="badge ${k}">${t}</span></div>
+      <div class="d">무료 발렛 · ${esc(v.횟수)}</div>
+      <div class="k">전월실적 <b>${esc(v.전월실적)}</b> · 무료주차 ${esc(v.무료주차)}${rec?` · 영수증 <b>${esc(rec)}</b>`:""}</div><div class="k">${esc(v.주의)}</div></div>`};
+  });
+  const firstOk=cards.find(x=>x.has&&x.ok);
+  return `<div class="grp"><h3>${esc(h)} 발렛</h3>${cards.map(x=>x.has?x.html(x===firstOk?"best":""):x.html).join("")}</div>`;
+}
+function benefitRow(b,best,label){
+  const cs=cardsOf(b.카드); const [k,t]=b.내용==="제공 안 함"?["q","없음"]:judge(cs[0],b.전월실적);
+  const no=b.내용==="제공 안 함";
+  return `<div class="row ${no?"no":""} ${best?"best":""}"><div class="top"><span class="c">${esc(label||b.카드)}</span><span class="badge ${k}">${t}</span></div>
+    <div class="d">${esc(b.내용)}</div>
+    ${no?"":`<div class="k">횟수 <b>${esc(b.횟수)}</b> · 전월실적 <b>${esc(b.전월실적)}</b></div>${b.방법&&b.방법!=="-"?`<div class="k">${esc(b.방법)}</div>`:""}`}</div>`;
+}
+function situBlock(s){
+  const rows=D.benefits.filter(b=>b.상황===s);
+  const order=rows.map(b=>{const cs=cardsOf(b.카드);const [k]=judge(cs[0],b.전월실적);return {b,ok:k==="ok"&&b.내용!=="제공 안 함"}});
+  const firstOk=order.find(o=>o.ok);
+  order.sort((a,b)=>(b.ok-a.ok));
+  return `<div class="grp"><h3>${esc(s)}</h3>${order.map(o=>benefitRow(o.b,o===firstOk)).join("")}</div>`;
+}
+
+function search(){
+  const raw=document.getElementById("q").value.trim(); const q=norm(raw);
+  document.querySelectorAll(".chip").forEach(c=>c.classList.toggle("on",norm(c.textContent)===q));
+  const out=[];
+  if(!q){
+    out.push(`<div class="empty">위 칸에 호텔 이름이나 상황을 입력하거나, 버튼을 눌러 보세요. 지금 실적으로 쓸 수 있는 카드엔 <b>★</b>와 <b>지금 가능</b>이 붙어요.</div>`);
+  } else {
+    // 1) 호텔 이름
+    const hs=Object.keys(HOTELS).filter(h=>norm(h).includes(q)||q.includes(norm(h)));
+    hs.slice(0,6).forEach(h=>out.push(hotelBlock(h)));
+    // 2) 호텔 발렛 전체 목록
+    if(/호텔발렛|호텔발레|발렛호텔/.test(q)){
+      out.push(`<div class="grp"><h3>호텔 발렛 — 카드별 조건</h3>${CARD_ORDER.map(c=>{const v=D.hotel_valet[c];const [k,t]=judge(c,v.전월실적);
+        return `<div class="row"><div class="top"><span class="c">${esc(c)} · ${v.호텔.length}곳</span><span class="badge ${k}">${t}</span></div><div class="k">${esc(v.횟수)} · 전월실적 <b>${esc(v.전월실적)}</b> · 무료주차 ${esc(v.무료주차)}</div><div class="k">${v.호텔.map(esc).join(" · ")}</div></div>`}).join("")}</div>`);
+    }
+    // 3) 상황
+    let key=q; if(!/호텔/.test(q)) Object.entries(ALIAS).forEach(([a,b])=>{if(q.includes(norm(a)))key=b});
+    const ss=SITUS.filter(s=>norm(s).includes(q)||norm(s).includes(norm(key))||D.benefits.some(b=>b.상황===s&&norm(b.내용).includes(q)));
+    ss.forEach(s=>out.push(situBlock(s)));
+    // 4) 카드 이름
+    CARD_ORDER.forEach(c=>{ if(q===norm(c)||norm(D.cards[c].이름).includes(q)&&q.length>=2){
+      const rows=D.benefits.filter(b=>cardsOf(b.카드).includes(c)&&b.내용!=="제공 안 함");
+      const v=D.hotel_valet[c];
+      out.push(`<div class="grp"><h3>${esc(D.cards[c].이름)} 전체</h3><div class="row"><div class="k">연회비 ${esc(D.cards[c].연회비)} · ${esc(D.cards[c].브랜드)}</div><div class="d">호텔 발렛 ${v.호텔.length}곳 · ${esc(v.횟수)} · 전월 ${esc(v.전월실적)}</div></div>${rows.map(b=>benefitRow(b,false,b.상황)).join("")}</div>`);
+    }});
+    if(out.length===0) out.push(`<div class="empty">"${esc(raw)}"에 맞는 혜택을 못 찾았어요. 호텔은 이름 일부만 넣어도 돼요 (예: 신라, 콘래드).</div>`);
+  }
+  document.getElementById("res").innerHTML=out.join("");
+}
+
+document.getElementById("asof").textContent=D.기준일;
+document.getElementById("chips").innerHTML=CHIPS.map(c=>`<span class="chip">${c}</span>`).join("");
+document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{const i=document.getElementById("q");i.value=(i.value===c.textContent?"":c.textContent);search()});
+document.getElementById("q").addEventListener("input",search);
+document.getElementById("foot").innerHTML="출처: "+CARD_ORDER.map(c=>`${esc(c)} — ${esc(D.cards[c].출처)}`).join("<br>")+"<br>‘조건 확인’은 안내장에서 조건을 확실히 못 읽은 항목이에요.";
+drawCards(); drawEvents(); search();
+</script>
+</body>
+</html>
