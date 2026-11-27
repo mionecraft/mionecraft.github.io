@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>책플리 시험용 신청서</title>
+<style>
+:root{--ink:#1f2a5a;--bg:#f6f2ec;--card:#fff;--line:#e5ddd0;--ok:#17803d;--bad:#c0392b;--mut:#666;--warn:#fff4e5;--warnl:#e4572e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:#222;font:16px/1.6 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;word-break:keep-all;overflow-wrap:anywhere}
+main{max-width:560px;margin:0 auto;padding:16px}
+h1{font-size:21px;color:var(--ink);margin:6px 0 12px}
+.warn{background:var(--warn);border:2px solid var(--warnl);border-radius:12px;padding:12px 14px;margin:0 0 14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:0 0 12px}
+.k{font-size:14px;color:var(--mut)}
+.v{font-size:19px;font-weight:700;color:var(--ink)}
+.no{font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:1px}
+ol{margin:6px 0 0;padding-left:24px}
+li{padding:2px 0}
+.ok{color:var(--ok);font-weight:700}
+.bad{color:var(--bad);font-weight:700}
+.sm{font-size:14px;color:var(--mut)}
+</style>
+</head>
+<body>
+<main>
+<h1>책플리 시험용 신청서</h1>
+<div class="warn"><b>시험용 화면이에요.</b> 아무것도 저장하거나 보내지 않아요. 실제 운영에서는 이 자리에 구글 설문 같은 신청서가 열리고, 휴대폰 번호와 개인정보 동의를 넣어 [제출]을 누릅니다.</div>
+<div class="card"><div class="k">응모 번호</div><div class="v no" id="no">-</div><div class="sm" id="nochk"></div></div>
+<div class="card"><div class="k">목록 이름</div><div class="v" id="name">-</div></div>
+<div class="card"><div class="k">책 목록 <span id="cnt"></span></div><ol id="books"></ol><div class="sm" id="none"></div></div>
+<p class="sm">위 세 칸이 북원첵에서 채워져 왔는지 보셨으면 이 창을 닫고 북원첵으로 돌아가세요.</p>
+</main>
+<script>
+(function () {
+  var p = new URLSearchParams(location.search);
+  var no = (p.get('no') || '').trim(), name = (p.get('name') || '').trim(), books = p.get('books') || '';
+  var AL = 'ACDEFGHJKLMNPQRTUVWXY';
+  function chk(s) { var h = 2166136261; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return AL[h % 21] + AL[Math.floor(h / 21) % 21]; }
+  function $(i) { return document.getElementById(i); }
+  $('no').textContent = no || '(비어 있음)';
+  var m = /^(M-\d{4}-\d{4}|\d{2}-\d{4,}|S-\d{4,})-([A-Z]{2})$/.exec(no), ok = !!m && chk(m[1]) === m[2];
+  var s = document.createElement('span'); s.className = ok ? 'ok' : 'bad';
+  s.textContent = ok ? '✅ 번호 모양과 끝 두 글자(확인 글자)가 맞아요' : '❌ 번호가 비었거나 맞지 않아요';
+  $('nochk').appendChild(s);
+  $('name').textContent = name || '(비어 있음)';
+  var L = books.split(/\r?\n/).map(function (x) { return x.trim(); }).filter(Boolean);
+  $('cnt').textContent = '(' + L.length + '줄)';
+  L.forEach(function (x) { var li = document.createElement('li'); li.textContent = x; $('books').appendChild(li); });
+  if (!L.length) $('none').textContent = '(비어 있음)';
+})();
+</script>
+</body>
+</html>
