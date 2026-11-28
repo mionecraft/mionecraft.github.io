@@ -170,13 +170,15 @@ footer p{margin:6px 0}
     <div class="lrow"><label for="q">책 목록 (제목이나 ISBN)</label><button type="button" class="clr" id="clr">지우기</button></div>
     <textarea id="q" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" enterkeyhint="enter" placeholder="예) 소년이 온다&#10;작별하지 않는다&#10;9788936434120&#10;&#10;학교 권장도서·서점 목록을 통째로 붙여 넣어도 돼요"></textarea>
     <div class="btns">
+      <button type="button" class="btn" id="photo" aria-label="사진으로 넣기">사진</button>
       <button type="button" class="btn" id="paste">붙여넣기</button>
       <button type="button" class="btn pri" id="go">찾기</button>
     </div>
+    <input type="file" id="photof" accept="image/*" multiple hidden>
     <div id="msg" role="status"></div>
-    <p class="tip">붙여 넣으면 바로 찾아요. 직접 쓸 때는 <b>한 줄에 한 권</b>, 줄을 바꾸면 그 책부터 찾아요. 한 번에 20권까지. <button type="button" class="demo" id="demo">예시로 해 보기</button></p>
+    <p class="tip"><b>사진</b>(서점·도서관 화면 캡처, 책 목록 사진)을 고르면 제목을 읽어 채우고 바로 찾아요. 붙여 넣어도 바로 찾아요. 직접 쓸 때는 <b>한 줄에 한 권</b>, 줄을 바꾸면 그 책부터 찾아요. 한 번에 20권까지. <button type="button" class="demo" id="demo">예시로 해 보기</button></p>
     <details class="paper"><summary>종이 목록(학교 권장도서 등)은 어떻게 넣나요?</summary>
-      <p>휴대폰 카메라의 글자 인식으로 목록 글자를 복사해 여기에 붙여 넣으면 됩니다.</p>
+      <p>[사진]으로 목록을 찍어 올려도 되지만, 종이를 찍은 사진은 잘못 읽는 글자가 많아요. 휴대폰 카메라의 글자 인식으로 목록 글자를 복사해 여기에 붙여 넣는 쪽이 더 정확합니다.</p>
       <p>· 아이폰: 카메라를 목록에 대고 노란 테두리가 보이면 <b>라이브 텍스트</b> 단추를 눌러요 → 글자를 길게 눌러 <b>전체 선택</b> → <b>복사하기</b> → 여기서 [붙여넣기]. 입력칸을 눌렀을 때 <b>텍스트 스캔</b>이 보이면 그걸로 바로 넣어도 돼요.</p>
       <p>· 안드로이드: <b>Google 렌즈</b>(또는 카메라의 글자 인식)로 목록을 비추고 글자를 눌러 골라 <b>복사</b> → 여기서 [붙여넣기]</p>
       <p>번호·저자·출판사가 섞여 있어도 제목만 골라 찾아요.</p>
@@ -193,6 +195,7 @@ footer p{margin:6px 0}
   <footer>
     <p>북원첵(시범판)은 군포시도서관 홈페이지의 공개 소장자료 검색 결과를 그대로 불러와 보여 줍니다. 로그인하지 않고, 한 번에 20권까지·동시에 4건씩만 묻습니다. 받아오지 못한 책은 <b>확인 필요</b>로 두고 "없음"으로 바꾸지 않습니다.</p>
     <p>넣은 목록(책 제목·ISBN)은 군포시도서관 검색에만 쓰이고, 북원첵이 따로 모으거나 다른 곳에 보내지 않습니다(새로 고침에 대비해 이 휴대폰 브라우저에만 잠시 둡니다). 표지 그림은 군포시도서관 검색 결과에 적힌 그림 주소에서 불러옵니다.</p>
+    <p>[사진]으로 고른 사진은 이 휴대폰 브라우저 안에서만 글자를 읽고 어디에도 보내지 않습니다. 글자 읽기 프로그램(Tesseract.js, 무료 공개 프로그램)과 한국어 글자 자료는 처음 한 번 jsDelivr에서 받습니다(약 9MB).</p>
     <p id="cplfoot" hidden></p>
     <p>예약·상호대차 신청은 군포시도서관 홈페이지(로그인)나 자료실 데스크에서 합니다. <a href="https://www.gunpolib.go.kr/" target="_blank" rel="noopener">군포시도서관 홈페이지 ↗</a></p>
   </footer>
@@ -889,6 +892,130 @@ $('cplnow').addEventListener('click',function(e){var t=e.target.closest?e.target
   else render();
   cplLoad().then(function(){if(CP.qr){var l=cplById(CP.qr);tick('cpl/qr/'+CP.qr,l?l.name:'');CP.qr='';}});})();
 window.__bwcm={S:S,run:run,line:line,kindOf:kindOf,CP:CP,cplChk:cplChk,cplNewNo:cplNewNo,cplForm:cplForm,cplFix:cplFix};
+
+/* ── 사진 글자 읽기: 책 고르기 ── */
+// 글자 줄 → 책 목록(제목 / 저자). 서점 화면·종이 목록·손글씨·표지를 가려서 고름
+var OCRP=(function(){
+var HG=/[가-힣]/g;
+function hcount(s){return (String(s).match(HG)||[]).length;}
+function lcount(s){return (String(s).match(/[A-Za-z]/g)||[]).length;}
+// 한 글자씩 떨어진 한글 붙이기: 「소 년 이 온다」→「소년이 온다」, 「김 호 연 저」→「김호연 저」
+function tidy(s){s=String(s).replace(/\s+/g,' ').trim();var t=s.split(' '),o=[],run='';
+  t.forEach(function(w){if(/^[가-힣]$/.test(w)){run+=w;return;}if(run){if(run.length===1&&o.length&&/[가-힣]$/.test(o[o.length-1])&&!/^(저|글|역|편)$/.test(run))o[o.length-1]+=run;else o.push(run);run='';}o.push(w);});
+  if(run){if(run.length===1&&o.length&&/[가-힣]$/.test(o[o.length-1])&&!/^(저|글|역|편)$/.test(run))o[o.length-1]+=run;else o.push(run);}
+  return o.join(' ').replace(/^([가-힣]{2,4})(저|지음)$/,'$1 $2');}
+// 믿을 만한 낱말만 이어 한 줄로(큰 틈은 칸 나눔 「 ‖ 」)
+function lineOf(l){var ws=l.w.filter(function(x){return x.c>=45&&String(x.t).trim();}),bul=ws.length&&/^([-–~•·*▶►■□○●◆◇✔✓]|\d{1,3}[.)．]?)$/.test(ws[0].t);
+  // 앞뒤의 깨진 낱말(영문 짧은 조각·기호) 떼기
+  var junk=function(x){var t=x.t;return !/[가-힣0-9]/.test(t)&&(t.length<=3||x.c<70)&&!/^(\[?eBook\]?|\[도서\])$/i.test(t);};
+  while(ws.length&&junk(ws[0]))ws.shift();while(ws.length&&junk(ws[ws.length-1]))ws.pop();
+  if(!ws.length)return null;
+  var hs=ws.map(function(x){return x.b.y1-x.b.y0;}).sort(function(a,b){return a-b;}),h=hs[hs.length>>1]||10,cells=[[]];
+  var cx=[ws[0].b.x0];ws.forEach(function(x,i){if(i){var g=x.b.x0-ws[i-1].b.x1;if(g>h*2.2){cells.push([]);cx.push(x.b.x0);}}cells[cells.length-1].push(x.t);});
+  cells=cells.map(function(c){return tidy(c.join(' '));}).filter(Boolean);
+  var b={x0:ws[0].b.x0,x1:ws[ws.length-1].b.x1,y0:Math.min.apply(null,ws.map(function(x){return x.b.y0;})),y1:Math.max.apply(null,ws.map(function(x){return x.b.y1;}))};
+  var t=cells.join(' '),cs=ws.map(function(x){return x.c;});return {t:t,bul:bul,cx:cx,cells:cells,h:h,x0:b.x0,x1:b.x1,y0:b.y0,y1:b.y1,c:cs.reduce(function(a,b){return a+b;},0)/cs.length};}
+var AUTH=/^(.{1,60}?)\s*(\((지은이|저자|글|글·그림|그림|엮은이|엮음|편저|원작)\)|(?:\s|^)(저|지음|글|엮음|편저|글·그림)(?=\s*$|\s*[,·ㆍ|]))/;
+var PROMO=/굿즈|사은품|포함|이상\)|증정|이벤트|클리커|티셔츠|키링|파우치|캘린|책갈피|기획전|쿠폰|적립|할인|배송|도착|주문|원\)|\d+원|미리보기|장바구니|바로구매|품절|인기도순|재검색|상품태그|혜택|검색결과|통합검색|국내도서|외국도서|^#|관심작가|동명이인|알림신청|판매지수|리뷰|평점|정가|출판사|^\d{4}[.\-년]|\|\s*\d{4}|\d{4}\.\d{1,2}\.\d{1,2}/;
+var HEAD=/^(번호|순번|no\.?|도서명|서명|책\s*이름|제목|저자|지은이|출판사|발행처|비고|청구기호)$/i;
+var HEADLINE=/추천\s*도서|추천도서|권장\s*도서|필독|목록|사서\s*추천|빌릴\s*책|읽을\s*책|이달의|학년|방학|도서관|학교|안내|※|^\[?\d{4}\]?\s*년?$/;
+function stripTitle(t){t=String(t||'');if(/^\s*\d{1,3}\s*[.)]\s*[-–]/.test(t))return '';
+  t=t.replace(/^\s*\[?\s*(도서|노서|eBook|ebook|E북|전자책|오디오북|중고)\s*\]\s*/i,'').replace(/^\s*(\d{1,3}\s*[.)．]|\(\d{1,3}\)|[①-⑳]|[-–•·*▶►■□○●◆◇✔✓]|ㆍ)\s*/,'');
+  t=t.replace(/\s*[:：]\s.*$|\s*[:：]\s*["“『「].*$/,'').replace(/\s+[-–]\s+.*$/,'').replace(/\s*\[[^\]]*\]?\s*$/,'').replace(/\s*\[[^\]]*\]\s*/g,' ').replace(/\s*\((?:[^)]*에디션|\s*큰\s*글자[^)]*|개정[^)]*|양장[^)]*|특별판|리커버[^)]*|합본[^)]*|전\s*\d+권[^)]*)\)?\s*/g,' ');
+  t=t.replace(/[『「《〈"“\[\]]/g,' ').replace(/[』」》〉"”]/g,' ').replace(/[\s,·ㆍ|:;]+$/,'').replace(/\s+/g,' ').trim();return t;}
+function authorOf(t){var m=String(t).match(AUTH);if(!m)return '';var a=m[1].replace(/\([^)]*\)/g,' ').split(/[,，·ㆍ|]/)[0].replace(/\s+/g,' ').trim();a=tidy(a);return hcount(a)+lcount(a)>=2&&a.length<=20&&/^[가-힣A-Za-z.\s]+$/.test(a)&&a.split(' ').length<=4?a:'';}
+function goodTitle(t){var n=hcount(t)+lcount(t);if(n<2||t.length>50)return false;if(PROMO.test(t)||HEAD.test(t))return false;
+  if(/^[\d\s.,\-:\/()#%]+$/.test(t))return false;var bad=(t.match(/[^가-힣A-Za-z0-9\s.,:;!?'"·\-()&]/g)||[]).length;return bad<=Math.max(1,t.length/8);}
+function key(t){return String(t).replace(/[^가-힣A-Za-z0-9]/g,'').toLowerCase();}
+function pick(o){var W=o.W||1000,L=(o.lines||[]).map(lineOf).filter(function(l){return l&&(hcount(l.t)+lcount(l.t)>=1);});
+  L.sort(function(a,b){return a.y0-b.y0;});
+  var out=[],seen={},cur=null,add=function(t,a,why){t=stripTitle(t);if(!goodTitle(t))return;var k=key(t);if(!k||seen[k])return;seen[k]=1;out.push({t:t,a:a||'',why:why,c:cur?Math.round(cur.c):0});};
+  // ① 서점·도서관 화면: 「○○ 저」「(지은이)」 줄마다 바로 위(같은 칸)의 제목
+  var A=L.filter(function(l){return AUTH.test(l.t)&&!PROMO.test(l.t)&&!/[『「《〈\"“\]]/.test(l.t)&&!l.bul&&l.cells.length<2&&!/^\s*\d{1,3}\s*[.)]/.test(l.t)&&authorOf(l.t);});
+  // 「… 지음」 줄이 줄줄이 붙어 있으면 서점 화면이 아니라 종이 목록
+  var nextTo=A.filter(function(a){var i=L.indexOf(a);return (L[i+1]&&A.indexOf(L[i+1])>=0)||(L[i-1]&&A.indexOf(L[i-1])>=0);}).length;if(A.length>=2&&nextTo*2>=A.length)A=[];
+  if(A.length){A.forEach(function(a){var up=L.filter(function(l){return l!==a&&l.y1<=a.y0+a.h*0.3&&l.y0>=a.y0-a.h*6&&Math.abs(l.x0-a.x0)<W*0.06&&!AUTH.test(l.t);});
+      // 아래에서 위로: 붙어 있는 줄만, 광고 줄에서 멈춤
+      var blk=[],y=a.y0;for(var i=up.length-1;i>=0;i--){var l=up[i];if(y-l.y1>Math.max(l.h,a.h)*1.6)break;if(PROMO.test(l.t)&&!/^\s*\[?(도서|eBook)/i.test(l.t))break;blk.unshift(l);y=l.y0;if(/^\s*(\[?(도서|노서|eBook)\]|\d{1,3}\.)/i.test(l.t))break;}
+      if(!blk.length)return;cur={c:Math.min.apply(null,blk.map(function(l){return l.c;}))};var t=blk.map(function(l){return l.t;}).join(' ');add(t,authorOf(a.t),'store');});
+    out.mode='store';return out;}
+  // ② 표지: 다른 줄보다 훨씬 큰 글씨가 있고 번호 매긴 줄이 거의 없음
+  var hs=L.map(function(l){return l.h;}).sort(function(a,b){return a-b;}),med=hs[hs.length>>1]||1,numbered=L.filter(function(l){return l.bul||/^\s*(\d{1,3}\s*[.)．]|[-–•·*▶►■□○●◆◇✔✓]|『|「)/.test(l.t)||l.cells.length>=2&&/^\d{1,3}$/.test(l.cells[0]);}).length;
+  var listy=L.filter(function(l){return /[『「]/.test(l.t);}).length+numbered,T2=L.filter(function(l){return l.cells.length>=2;}),tabley=0;T2.forEach(function(a){var n=T2.filter(function(b){return Math.abs(b.cx[b.cx.length-1]-a.cx[a.cx.length-1])<W*0.03||Math.abs(b.cx[1]-a.cx[1])<W*0.03;}).length;if(n>tabley)tabley=n;});if(tabley>=5)listy+=tabley;
+  var COVERAD=/추천|베스트|셀러|기념|수상|출간|만\s*부|돌파|연속|시대|[?!！？]|에디션|후보|영화|부문|전망|대한민국|강력|화제|작가의|신작|장편|소설$/;
+  var big=L.filter(function(l){var t=stripTitle(l.t);return l.h>=med*1.5&&goodTitle(t)&&t.length<=25&&!COVERAD.test(l.t);});
+  if(listy<3&&L.length<=30&&big.length){big.sort(function(a,b){return b.h-a.h;});var top=big[0],bl=big.filter(function(l){return l.h>=top.h*0.75;}).sort(function(a,b){return a.y0-b.y0;});
+    var au='';L.forEach(function(l){if(!au&&/(지음|장편소설|소설|저$|글$|옮김)/.test(l.t)){au=authorOf(l.t.replace(/(장편\s*소설|소설집|소설|옮김.*)$/,'저'));}});
+    cur={c:Math.min.apply(null,bl.map(function(l){return l.c;}))};add(bl.map(function(l){return l.t;}).join(' '),au,'cover');return out;}
+  // ③ 종이·손글씨 목록: 한 줄에 한 권(표면 칸으로 나눔)
+  if(listy<3){var sh=L.filter(function(l){var t=stripTitle(l.t);return goodTitle(t)&&t.length<=20&&!COVERAD.test(l.t)&&!HEADLINE.test(l.t);});
+    var shh=sh.map(function(l){return l.h;});if(sh.length<3||sh.length<L.length*0.6||Math.max.apply(null,shh)>Math.min.apply(null,shh)*1.4)return out;}
+  L.forEach(function(l){cur=l;var t=l.t;if(HEADLINE.test(t)&&!/『|「/.test(t))return;
+    var q=t.match(/[『「《〈"“]+\s*([^』」》〉"”]{1,40}?)\s*(?:[』」》〉"”]+\s*(.*))?$/);if(q&&q[2]===undefined){var m2=q[1].match(/^(.*?\S)\s*([가-힣]{2,4})\s*(지음|저|글)?$/);if(m2&&/지음|저|글/.test(q[1])){if(key(m2[1]).length<3)return;q=[q[0],m2[1],m2[2]];}else{if(key(q[1]).length<4)return;q[2]='';}}if(q){add(q[1],authorOf(q[2]||'')||tidy((q[2]||'').replace(/(지음|저|글|엮음|옮김).*$/,'').split(/[,，]/)[0]).trim(),'quote');return;}
+    var c=l.cells.slice();if(c.length&&/^\d{1,3}[.)]?$/.test(c[0]))c.shift();if(!c.length)return;
+    var tail=c.join(' ').match(/^(.*?\S)\s*([가-힣]{2,4})\s*(지음|지은이|저|엮음|글)$/);if(tail&&hcount(tail[1])>=1){add(tail[1],tail[2],'list');return;}
+    var nb=/^\s*(\d{1,3}\s*[.)．]|[-–•·*▶►■□○●◆◇✔✓])/.test(l.t);if(!nb&&(stripTitle(c[0]).length>20||COVERAD.test(l.t)))return;
+    if(c.length>=2&&HEAD.test(c[0]))return;
+    var a2=c.length>=2&&hcount(c[1])>=2&&c[1].length<=15&&!PROMO.test(c[1])?tidy(c[1]):'';add(c[0],a2,'list');});
+  return out;}
+// 세로 글씨(책등): 줄마다 한글 두 글자 넘는 것만, 저자처럼 짧은 이름(2~3자)은 앞 줄 저자로
+function pickVert(o){var L=(o.lines||[]).map(lineOf).filter(function(l){return l&&hcount(l.t)>=2;}),out=[],seen={};
+  L.forEach(function(l){var t=tidy(l.t.replace(/\s+/g,' ')),k=key(t);if(!goodTitle(t)||seen[k]||l.c<75||/(.)\1\1/.test(k))return;
+    if(/^[가-힣]{2,3}$/.test(t.replace(/\s/g,''))&&out.length&&!out[out.length-1].a){out[out.length-1].a=t.replace(/\s/g,'');return;}seen[k]=1;out.push({t:t,a:'',why:'vert',c:Math.round(l.c)});});
+  return out;}
+function toText(bs){return bs.map(function(b){return b.a?b.t+' / '+b.a:b.t;}).join('\n');}
+return {pick:pick,pickVert:pickVert,toText:toText,lineOf:lineOf,tidy:tidy};})();
+
+/* ── 사진 글자 읽기: 브라우저 안 OCR ── */
+// 사진 → 책 목록. 글자 읽기는 이 휴대폰 브라우저 안에서만(Tesseract.js) — 사진은 어디에도 보내지 않음
+var OCRC=(function(){
+var TJS='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js',P={},libP=null;
+function lib(){if(window.Tesseract)return Promise.resolve();if(libP)return libP;libP=new Promise(function(res,rej){var s=document.createElement('script');s.src=TJS;s.crossOrigin='anonymous';s.onload=function(){res();};s.onerror=function(){libP=null;rej(new Error('lib'));};document.head.appendChild(s);});return libP;}
+// langs: 'kor+eng'(가로) / 'kor_vert'(세로)
+function worker(langs,psm,prog){var k=langs+'|'+psm;if(P[k])return P[k];
+  P[k]=lib().then(function(){return Tesseract.createWorker(langs.split('+'),1,{logger:function(m){if(prog&&m&&m.status)prog(m.status,m.progress||0);}});})
+    .then(function(w){return w.setParameters({tessedit_pageseg_mode:psm,preserve_interword_spaces:'1'}).then(function(){return w;});});
+  P[k].catch(function(){delete P[k];});return P[k];}
+function bitmap(file){var el=function(){return new Promise(function(res,rej){var u=URL.createObjectURL(file),im=new Image();im.onload=function(){res(im);};im.onerror=function(){rej(new Error('img'));};im.src=u;});};
+  if(window.createImageBitmap)try{return createImageBitmap(file,{imageOrientation:'from-image'}).catch(el);}catch(e){}return el();}
+// 긴 변 1000~2000px, 흑백, 대비 늘리기(adapt: 그늘진 종이 사진용 주변 밝기 기준 흑백)
+function prep(bm,adapt){var w=bm.width,h=bm.height,L=Math.max(w,h),s=L>2000?2000/L:L<1000?Math.min(2,1000/L):1;
+  var W=Math.round(w*s),H=Math.round(h*s),c=document.createElement('canvas');c.width=W;c.height=H;var x=c.getContext('2d',{willReadFrequently:true});x.drawImage(bm,0,0,W,H);
+  var d=x.getImageData(0,0,W,H),a=d.data,hist=new Array(256).fill(0),i,n=W*H,g=new Uint8ClampedArray(n);
+  for(i=0;i<n;i++){var v=(a[i*4]*299+a[i*4+1]*587+a[i*4+2]*114)/1000|0;g[i]=v;hist[v]++;}
+  var lo=0,hi=255,acc=0;for(i=0;i<256;i++){acc+=hist[i];if(acc>n*0.01){lo=i;break;}}acc=0;for(i=255;i>=0;i--){acc+=hist[i];if(acc>n*0.01){hi=i;break;}}
+  var k=hi>lo?255/(hi-lo):1;for(i=0;i<n;i++)g[i]=Math.max(0,Math.min(255,(g[i]-lo)*k));
+  if(adapt){var r=Math.max(8,Math.round(Math.max(W,H)/50)),I=new Float64Array((W+1)*(H+1)),yy,xx,o=new Uint8ClampedArray(n);
+    for(yy=0;yy<H;yy++){var rs=0;for(xx=0;xx<W;xx++){rs+=g[yy*W+xx];I[(yy+1)*(W+1)+xx+1]=I[yy*(W+1)+xx+1]+rs;}}
+    for(yy=0;yy<H;yy++)for(xx=0;xx<W;xx++){var x0=Math.max(0,xx-r),x1=Math.min(W,xx+r+1),y0=Math.max(0,yy-r),y1=Math.min(H,yy+r+1);
+      var m=(I[y1*(W+1)+x1]-I[y0*(W+1)+x1]-I[y1*(W+1)+x0]+I[y0*(W+1)+x0])/((x1-x0)*(y1-y0));o[yy*W+xx]=g[yy*W+xx]<m-12?0:255;}g=o;}
+  for(i=0;i<n;i++){a[i*4]=a[i*4+1]=a[i*4+2]=g[i];}x.putImageData(d,0,0);return c;}
+function rec(w,c){return w.recognize(c).then(function(o){return {W:c.width,H:c.height,lines:(o.data.lines||[]).map(function(l){return {c:l.confidence,b:l.bbox,w:l.words.map(function(x){return {t:x.text,c:x.confidence,b:x.bbox};})};})};});}
+// 1) 가로 글씨 그대로 → 2) 세 권보다 적으면 그늘 지운 흑백으로 다시 → 3) 하나도 없으면 세로 글씨(책등)로
+function read(file,prog){var step=function(t){if(prog)prog(t);};var bm;step('글자 읽기 준비 중(처음 한 번은 약 9MB 받음)');
+  return Promise.all([worker('kor+eng','4',function(st,p){if(/loading/.test(st)&&p<1)step('글자 읽기 자료 받는 중(처음 한 번만, 약 9MB) '+Math.round(p*100)+'%');}),bitmap(file)]).then(function(r){bm=r[1];step('사진에서 글자 읽는 중');return rec(r[0],prep(bm,false));})
+  .then(function(o1){var b1=OCRP.pick(o1);if(b1.length>=3||b1.mode==='store')return {books:b1,pass:1};step('한 번 더 읽는 중');
+    return worker('kor+eng','4').then(function(w){return rec(w,prep(bm,true));}).then(function(o2){var b2=OCRP.pick(o2),best=b2.length>b1.length?{books:b2,pass:2}:{books:b1,pass:1};
+      if(best.books.length)return best;step('세로 글씨로 읽는 중');
+      return worker('kor_vert','3').then(function(w){return rec(w,prep(bm,false));}).then(function(o3){return {books:OCRP.pickVert(o3),pass:3};});});});}
+return {read:read,prep:prep,worker:worker};})();
+
+/* ── 사진으로 넣기 (0.8.1) ──
+   서점·도서관 화면 캡처나 책 목록 사진을 고르면 이 브라우저 안에서 글자를 읽어(Tesseract.js) 「제목 / 저자」 줄로 입력칸에 채우고 바로 찾음.
+   사진은 어디에도 보내지 않음. 글자 읽기 프로그램·한국어 자료만 처음 한 번 jsDelivr에서 받음. 사진은 한 번에 5장까지. */
+var PH={busy:false};
+$('photo').addEventListener('click',function(){if(PH.busy)return;msg('');var f=$('photof');f.value='';f.click();});
+$('photof').addEventListener('change',function(){var fs=[].slice.call(this.files||[]).filter(function(f){return /^image\//.test(f.type)||/\.(jpe?g|png|webp|gif|bmp|heic|heif)$/i.test(f.name||'');});
+  if(!fs.length)return;if(fs.length>5){fs=fs.slice(0,5);}photoRun(fs,(this.files||[]).length>5);});
+function photoRun(fs,cut){PH.busy=true;var btn=$('photo');btn.disabled=true;btn.textContent='읽는 중';var all=[],seen={},i=0,fail=0;
+  var next=function(){if(i>=fs.length)return Promise.resolve();var f=fs[i++],pre=fs.length>1?'사진 '+i+'/'+fs.length+' · ':'';
+    return OCRC.read(f,function(t){msg(pre+t+'…');}).then(function(r){r.books.forEach(function(b){var k=mainT(b.t)||b.t;if(seen[k])return;seen[k]=1;all.push(b);});},function(e){fail++;if(e&&e.message==='lib')throw e;}).then(next);};
+  next().then(function(){
+    if(!all.length){msg(fail?'사진을 열지 못했어요. 다른 사진으로 해 보세요.':'사진에서 책 제목을 찾지 못했어요. 서점 화면 캡처나 글씨가 반듯한 목록 사진이 잘 돼요. 종이 목록은 아래 「종이 목록은 어떻게 넣나요?」처럼 휴대폰 글자 인식으로 복사해 붙여 넣으면 더 정확해요.');return;}
+    cplSet(null);ta.value=(ta.value.trim()?ta.value.replace(/\s*$/,'\n'):'')+OCRP.toText(all);lastLen=ta.value.length;grow();run(true);ta.blur();toResults();
+    msg('사진에서 '+all.length+'권을 읽어 넣었어요'+(cut?'(사진은 5장까지만 읽음)':'')+'. 잘못 읽은 줄은 고치거나 지워 주세요.');},
+  function(){msg('글자 읽기 프로그램을 받지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.');})
+  .then(function(){PH.busy=false;btn.disabled=false;btn.textContent='사진';});}
 
 })();
 </script>
