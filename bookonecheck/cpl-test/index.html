@@ -706,7 +706,7 @@ $('paste').addEventListener('click',function(){msg('');
   if(!navigator.clipboard||!navigator.clipboard.readText){msg('이 브라우저는 버튼 붙여넣기가 안 돼요. 입력칸을 길게 눌러 [붙여넣기] 해 주세요.');ta.focus();return;}
   navigator.clipboard.readText().then(function(t){if(!String(t||'').trim()){msg('복사해 둔 글이 없어요. 목록을 먼저 복사해 주세요.');return;}
     ta.value=(ta.value.trim()?ta.value.replace(/\s*$/,'\n'):'')+t;lastLen=ta.value.length;grow();run(true);toResults();},
-    function(){msg('붙여넣기를 허락하지 않았거나 이 브라우저에서 막혀 있어요. 입력칸을 길게 눌러 [붙여넣기] 해 주세요.');ta.focus();});});
+    function(){var ios=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);msg(ios?'아이폰은 [붙여넣기]를 누른 뒤 위에 작게 뜨는 「붙여넣기」를 한 번 더 눌러 주세요. 안 뜨면 입력칸을 길게 눌러 [붙여넣기] 해 주세요.':'붙여넣기를 허락하지 않았거나 이 브라우저에서 막혀 있어요. 입력칸을 길게 눌러 [붙여넣기] 해 주세요.');ta.focus();});});
 document.addEventListener('click',function(e){var t=e.target.closest?e.target.closest('button,[data-open]'):null;if(!t)return;var a;
   if((a=t.getAttribute('data-lib'))!==null){S.visit=a;lsSet('bwcm_visit',a);render();return;}
   if(t.hasAttribute('data-alllibs')){S.allLibs=!S.allLibs;render();return;}
@@ -1022,7 +1022,7 @@ function read(file,prog){var step=function(t){if(prog)prog(t);};var bm;step('글
       return worker('kor_vert','3').then(function(w){return rec(w,prep(bm,false));}).then(function(o3){return {books:OCRP.pickVert(o3),pass:3};});});});}
 return {read:read,prep:prep,worker:worker};})();
 
-/* ── 사진으로 넣기 (0.8.2: 표 칸 서식(슬립) 읽기, 이미 넣은 책은 다시 안 넣음) ──
+/* ── 사진으로 넣기 (0.8.2: 표 칸 서식(슬립) 읽기, 이미 넣은 책은 다시 안 넣음 / 0.8.3: 아이폰 붙여넣기 안내) ──
    서점·도서관 화면 캡처나 책 목록 사진을 고르면 이 브라우저 안에서 글자를 읽어(Tesseract.js) 「제목 / 저자」 줄로 입력칸에 채우고 바로 찾음.
    사진은 어디에도 보내지 않음. 글자 읽기 프로그램·한국어 자료만 처음 한 번 jsDelivr에서 받음. 사진은 한 번에 5장까지. */
 var PH={busy:false};
