@@ -812,6 +812,7 @@ function cplJudge(){var r={n:S.qs.length,wait:0,bad:0,pick:0};
 // 나눌 책: 고른 판(없으면 군포 소장이 가장 많은 판)의 ISBN·제목
 function cplBooks(){return S.qs.map(function(q){var L=line(q);if(!L||!L.items.length)return null;var G=L.sel||(L.wsel&&L.wsel.G[0])||L.G[0];if(!G)return null;
   return{isbn:/^97[89]\d{10}$/.test(G.isbn||'')?G.isbn:'',title:cleanTxt(L.title||G.title,120)};});}
+function cplHeld(){var B=cplBooks(),out=[],seen={};S.qs.forEach(function(q,i){var k=kindOf(q);if(k==='wait'||k==='none'||k==='cand'||k==='err')return;var L=line(q);if(!L||(isSeries(L)&&!L.sel))return;var b=B[i];if(!b)return;var key=b.isbn||'T:'+b.title.replace(/\s+/g,'');if(seen[key])return;seen[key]=1;out.push(b);});return out;}
 function cplBookTxt(bs){return bs.map(function(b){return b.isbn||b.title.replace(/;/g,',');}).join('\n');}
 // 구글 설문 「미리 채워진 링크」는 {번호}를 %7B%EB%B2%88%ED%98%B8%7D처럼 바꿔 씀 → {번호}로 되돌림({이름}·{책}도)
 function cplFix(f){return String(f||'').trim().replace(/(?:\{|%7B)((?:%[0-9A-Fa-f]{2}|[^{}%&=#\s])+?)(?:\}|%7D)/gi,function(m,x){var d=x;try{d=decodeURIComponent(x.replace(/\+/g,' '));}catch(e){}d=d.trim();return /^(번호|이름|책)$/.test(d)?'{'+d+'}':m;});}
@@ -828,7 +829,7 @@ function cplShare(){var el=$('cplshare');if(!el)return;var E=cplEv(),sig=qSig(S.
   if(!E.share||fromCpl||v.hide||S.qs.length<3||S.over){el.hidden=true;return;}
   if(v.mode==='open'||v.mode==='done'){el.hidden=false;return;}   // 이름 쓰는 중·나눈 뒤에는 그대로(다시 그리면 쓰던 글자가 사라짐)
   var j=cplJudge();if(j.wait){el.hidden=true;return;}
-  var bs=j.bad||j.pick?null:cplBooks(),bsig=bs&&bs.every(Boolean)?cplSig(bs):'';
+  var bs=cplHeld(),bsig=bs.length>=3?cplSig(bs):'';
   var mine=bsig&&cplMine().lists.filter(function(l){return l.sig===bsig;})[0];
   var pub=bsig&&CP.data.lists.filter(function(l){return cplSig(l.books.map(function(b){return{isbn:b.i,title:b.t};}))===bsig;})[0];
   var mode=!bsig?'notmet':mine?'done':pub?'pubdup':'line';
@@ -837,18 +838,17 @@ function cplShare(){var el=$('cplshare');if(!el)return;var E=cplEv(),sig=qSig(S.
 function cplDraw(j,pub){var el=$('cplshare'),v=CP.view,E=cplEv(),n=S.qs.length,h='',lab=E.inEv?'응모 번호':'목록 번호';
   var cpn=E.coupon?' · 선착순 '+E.limit+'명 커피':E.full?' · 커피 쿠폰은 마감':'';
   if(v.mode==='notmet'){
-    h='<div class="cr"><b>📋 이 목록 책플리로 나누기</b><button type="button" class="x" data-cs="x" aria-label="닫기">✕</button></div><div class="why">'+(j.bad?'⚠️ '+j.bad+'권은 군포시도서관에서 찾지 못했어요. '+n+'권 모두 군포시도서관에 있어야 나눌 수 있어요(다른 이용자가 바로 빌리게).':
-      '⚠️ '+j.pick+'권은 [도서관별 자세히]를 눌러 맞는 책(권)을 골라 주세요. 그러면 나눌 수 있어요'+(E.coupon?'(커피 쿠폰 응모).':'.'))+'</div>';}
+    h='<div class="cr"><b>📋 이 목록 책플리로 나누기</b><button type="button" class="x" data-cs="x" aria-label="닫기">✕</button></div><div class="why">군포시도서관에 있는 책이 3권 이상이면 나눌 수 있어요(대출 중인 책도 돼요). 지금 '+((v.bs||[]).length)+'권'+(j.bad?' · 군포에 없거나 확인이 필요한 '+j.bad+'권은 빼요':'')+'</div>';}
   else if(v.mode==='pubdup')h='<div class="cr"><b>📋 이 목록은 책플리에 이미 있어요</b><button type="button" class="x" data-cs="x" aria-label="닫기">✕</button></div><div class="why">「'+esc(pub&&pub.name)+'」 · 같은 책 묶음은 한 번만 실어요</div>';
-  else if(v.mode==='line')h='<div class="cr"><b>📋 이 목록 책플리로 나누기</b><button type="button" class="x" data-cs="x" aria-label="닫기">✕</button></div><div class="sm">찾은 '+n+'권에 목록 이름만 붙이면 돼요'+cpn+'</div><button type="button" class="go" data-cs="open">나누기</button>';
+  else if(v.mode==='line')h='<div class="cr"><b>📋 이 목록 책플리로 나누기</b><button type="button" class="x" data-cs="x" aria-label="닫기">✕</button></div><div class="sm">군포에 있는 '+((v.bs||[]).length)+'권에 목록 이름만 붙이면 돼요'+cpn+'</div><button type="button" class="go" data-cs="open">나누기</button>';
   else if(v.mode==='open'){
     h='<div class="cr"><b>📋 이 목록 책플리로 나누기</b><button type="button" class="x" data-cs="x" aria-label="닫기">✕</button></div>'+
       '<label for="cplName">목록 이름</label><input id="cplName" maxlength="30" autocomplete="off" enterkeyhint="done" placeholder="예: 1학년이 읽기 좋은 책">'+
-      '<div class="okl">✅ '+n+'권 모두 군포시도서관 소장 · ✅ 3~20권 · <span class="nmok">⬜ 목록 이름</span></div><div class="err" role="alert"></div>'+
+      '<div class="okl">✅ 군포시도서관 소장 '+((v.bs||[]).length)+'권'+(n>(v.bs||[]).length?' (군포에 없거나 확인 안 된 '+(n-(v.bs||[]).length)+'권은 빼요)':'')+' · ✅ 3~20권 · <span class="nmok">⬜ 목록 이름</span></div><div class="err" role="alert"></div>'+
       '<a class="go big off" id="cplGo" href="#" target="_blank" rel="noopener" aria-disabled="true">신청서 열고 '+(E.coupon?'응모':'나누기')+' ↗</a>'+
-      '<div class="note">이름·전화번호는 쓰지 마세요. 사서가 확인한 뒤 「시민 책플리」·게시판·SNS·전시에 실릴 수 있고, '+lab+'를 알려 주시면 언제든 내려 드려요. 신청서는 직접 [제출]을 눌러야 보내져요.</div>';}
+      '<div class="note">이름·전화번호는 쓰지 마세요. 사서가 확인한 뒤 「책플리」·게시판·SNS·전시에 실릴 수 있고, '+lab+'를 알려 주시면 언제든 내려 드려요. 신청서는 직접 [제출]을 눌러야 보내져요.</div>';}
   else if(v.mode==='done'){var L=v.list,f=E.form,url=cplForm(L.no,L.name,L.bs);
-    var cp=E.coupon?'사서가 목록을 확인해 실으면(주 1회) 선착순 '+E.limit+'명에게 커피 쿠폰을 보내 드려요.':E.full?'커피 쿠폰은 마감됐어요. 목록은 사서가 확인한 뒤 「시민 책플리」에 실려요.':'목록은 사서가 확인한 뒤 「시민 책플리」에 실려요.';
+    var cp=E.coupon?'사서가 목록을 확인해 실으면(주 1회) 선착순 '+E.limit+'명에게 커피 쿠폰을 보내 드려요.':E.full?'커피 쿠폰은 마감됐어요. 목록은 사서가 확인한 뒤 「책플리」에 실려요.':'목록은 사서가 확인한 뒤 「책플리」에 실려요.';
     var st='<li>열린 신청서에서 '+(E.coupon?'휴대폰 번호·개인정보 동의를 넣고 ':'')+'<b>[제출]</b>을 눌러야 끝나요.</li>'+
       (f.indexOf('{번호}')<0?'<li>신청서 「'+lab+'」 칸에 위 번호를 써 주세요.</li>':'')+
       (f.indexOf('{이름}')<0?'<li>신청서 「목록 이름」 칸에 이 이름을 써 주세요: 「'+esc(L.name)+'」</li>':'')+
@@ -869,8 +869,8 @@ $('cplshare').addEventListener('keydown',function(e){if(e.target.id==='cplName'&
 $('cplshare').addEventListener('click',function(e){var t=e.target.closest?e.target.closest('[data-cs],#cplGo'):null;if(!t)return;var v=CP.view;
   if(t.id==='cplGo'){var nm=cplCheck();
     if(!nm){e.preventDefault();var er=$('cplshare').querySelector('.err');if(er&&!er.textContent)er.textContent='목록 이름을 두 글자 이상 써 주세요';var inp=$('cplName');if(inp)inp.focus();return;}
-    var j=cplJudge(),bs=cplBooks();
-    if(j.wait||j.bad||j.pick||!bs.every(Boolean)||bs.length<3||bs.length>MAXBOOKS||cplSig(bs)!==cplSig(v.bs)){e.preventDefault();v.mode='';cplShare();return;}
+    var j=cplJudge(),bs=cplHeld();
+    if(j.wait||bs.length<3||bs.length>MAXBOOKS||cplSig(bs)!==cplSig(v.bs||[])){e.preventDefault();v.mode='';cplShare();return;}
     var M=cplMine(),sig=cplSig(bs),ex=M.lists.filter(function(l){return l.sig===sig;})[0];
     if(ex){e.preventDefault();v.list=ex;v.dup=1;v.mode='done';cplDraw();return;}   // 다른 창에서 먼저 나눈 목록: 그 번호로(새 번호가 든 신청서는 열지 않음)
     var L={no:v.no,name:nm,sig:sig,at:Date.now(),day:kToday(),bs:bs};M.lists=M.lists.concat([L]).slice(-30);lsSet('bwcm_cpl',JSON.stringify(M));
