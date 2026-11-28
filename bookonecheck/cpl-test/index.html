@@ -116,8 +116,9 @@ textarea:focus{outline:3px solid #9fb3e8;outline-offset:1px}
 .cplbar.rcbar{border-color:var(--navy);background:#f1f3fa}.cplbar.rcbar i{color:var(--navy)}
 #rec{margin-top:12px}.cplpane.rcpane{border-color:var(--navy)}
 .rctabs{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 8px}
-.rctabs button{flex:1 1 0;min-height:40px;border:1.5px solid var(--navy);background:#fff;color:var(--navy);border-radius:999px;font-weight:800;font-size:13.5px;padding:2px 6px;cursor:pointer}
+.rctabs button{flex:1 1 30%;min-height:40px;border:1.5px solid var(--navy);background:#fff;color:var(--navy);border-radius:999px;font-weight:800;font-size:13.5px;padding:2px 6px;cursor:pointer}
 .rctabs button.on{background:var(--navy);color:#fff}
+.rcsub{display:flex;gap:5px;flex-wrap:wrap;margin:0 0 8px}.rcsub button{min-height:34px;border:1px solid #b9bfcc;background:#fff;color:#3a3f48;border-radius:999px;font-size:13px;padding:2px 11px;cursor:pointer}.rcsub button.on{background:#e3e8f5;border-color:var(--navy);color:var(--navy);font-weight:800}
 .rcname,.rcmsg{font-size:13px;color:#4a4f58;margin:2px 0 6px}
 .rcl{list-style:none;margin:0;padding:0;max-height:52vh;overflow:auto;border-top:1px solid var(--line)}
 .rcl label{display:flex;align-items:center;gap:8px;padding:6px 2px;border-bottom:1px solid var(--line);cursor:pointer}
@@ -1054,12 +1055,16 @@ function photoRun(fs,cut){PH.busy=true;var btn=$('photo');btn.disabled=true;btn.
   function(){msg('글자 읽기 프로그램을 받지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.');})
   .then(function(){PH.busy=false;btn.disabled=false;btn.textContent='사진';});}
 
-/* ── 추천 목록에서 고르기 (0.8.4) ──
+/* ── 추천 목록에서 고르기 (0.8.4, 0.8.5에 국립 두 곳 더함) ──
    확장 「목록에서 골라 찾기」의 군포시도서관 목록 세 가지(이달 사서추천·지난달 인기·최근 한 달 신착)를 휴대폰에서도.
    군포시도서관 홈페이지가 그 화면에 쓰는 것과 같은 주소(pyxis-api)에서 목록만 받음. 고른 책(20권까지)을 입력칸에 넣고 바로 찾음.
-   국립중앙·국립어린이청소년도서관·예스24 목록은 휴대폰 브라우저에서 바로 받을 수 없어(그 사이트들이 다른 주소의 요청을 막음) 넣지 않음. */
-var RC={open:false,tab:'rec',L:{},sel:{},busy:false,shown:30};
-var RC_TABS=[['rec','이달 사서추천'],['pop','지난달 인기'],['new','최근 한 달 신착']];
+   국립어린이청소년도서관·국립중앙도서관 사서추천도서는 휴대폰 브라우저에서 바로 받을 수 없어(두 사이트가 다른 주소의 요청을 막음),
+   같은 공개 화면을 미리 받아 둔 rec_nl.json(이 페이지와 같은 곳)을 읽음. 받은 날짜를 화면에 보여 줌. 예스24는 넣지 않음. */
+var RC={open:false,tab:'rec',L:{},sel:{},busy:false,shown:30,sub:''};
+var RC_TABS=[['rec','이달 사서추천'],['pop','지난달 인기'],['new','최근 한 달 신착'],['nlcy','국립어린이청소년'],['nlk','국립중앙도서관']];
+var RC_SUB={nlcy:[['','전체'],['유아','유아'],['초등저학년','초등 저학년'],['초등고학년','초등 고학년'],['청소년','청소년']],nlk:[['','전체'],['문학','문학'],['인문과학','인문'],['사회과학','사회'],['자연과학','자연'],['테마','테마']]};
+var RC_NL=null;
+function rcNl(){if(!RC_NL)RC_NL=rcJ('rec_nl.json?v='+Math.floor(Date.now()/36e5)).catch(function(e){RC_NL=null;throw e;});return RC_NL;}
 function rcYmd(d){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
 function rcLastMonth(){var n=new Date(Date.now()+9*3600e3),y=n.getUTCFullYear(),m=n.getUTCMonth();if(m===0){y--;m=12;}return y+('0'+m).slice(-2);}
 // 군포 서버가 가끔 「다른 주소 허용」 표시 없이 답해 브라우저가 막음(검색도 같음) → 0.8초·2초 뒤 두 번 더 물음
@@ -1072,32 +1077,38 @@ function rcLoad(tab){if(RC.L[tab])return Promise.resolve(RC.L[tab]);
   if(tab==='rec')p=rcJ(API+'recommended-book-groups?recommendedBookTypeId=1&max=5').then(function(j){var g=((j&&j.data&&j.data.list)||[])[0];if(!g)throw new Error('none');
       return rcJ(API+'recommended-book-groups/'+g.id+'/books?recommendedBookTypeId=1&max=100&offset=0').then(function(k){return {name:g.name,books:((k&&k.data&&k.data.list)||[]).map(function(x){return rcBook(x.biblio);})};});});
   else if(tab==='pop'){var ym=rcLastMonth();p=rcJ(API+'popular-charged-books?max=20&durationMonth=&month='+ym).then(function(j){return {name:ym.slice(0,4)+'년 '+(+ym.slice(4))+'월 인기도서',books:((j&&j.data&&j.data.list)||[]).map(rcBook)};});}
+  else if(tab==='nlcy'||tab==='nlk')p=rcNl().then(function(j){var d=String(j.got||'').slice(0,10).split('-');
+      return {name:(tab==='nlcy'?'국립어린이청소년도서관':'국립중앙도서관')+' 사서추천도서 ('+(+d[1])+'월 '+(+d[2])+'일에 받아 둔 목록)',
+        books:(j[tab]||[]).map(function(x){return {t:String(x.t||''),a:String(x.a||'').split(/[;,]/)[0].replace(/\s*(지음|지은이|글·그림|글\s*·\s*그림|그림|글|저|엮음|옮김|소설|원작).*$/,'').trim(),i:/^97[89]\d{10}$/.test(x.i||'')?x.i:'',y:String(x.y||''),c:String(x.c||'').replace(/^http:\/\//,'https://'),g:String(x.g||''),m:String(x.m||'')};})};});
   else{var now=new Date(),from=new Date(now.getTime()-30*864e5);p=rcJ(API+'collections/2/search?max=60&offset=0&date_received='+encodeURIComponent('['+rcYmd(from)+' TO '+rcYmd(now)+']')).then(function(j){return {name:'최근 한 달 신착도서',books:((j&&j.data&&j.data.list)||[]).map(rcBook)};});}
   return p.then(function(r){var seen={};r.books=r.books.filter(function(b){var k=b.i||b.t.replace(/\s+/g,'');if(!b.t||seen[k])return false;seen[k]=1;return true;});RC.L[tab]=r;return r;});}
 function rcKey(b){return b.i||'T:'+b.t;}
 function rcRender(){var el=$('rec');if(!el)return;el.hidden=false;var n=Object.keys(RC.sel).length;
-  var h='<button type="button" class="cplbar rcbar'+(RC.open?' on':'')+'" id="rcbar" aria-expanded="'+RC.open+'"><b>📖 추천 목록</b><span>군포시도서관 사서추천·인기·신착에서 골라 바로 찾기</span><i>'+(RC.open?'닫기 ▴':'보기 ▾')+'</i></button>';
+  var h='<button type="button" class="cplbar rcbar'+(RC.open?' on':'')+'" id="rcbar" aria-expanded="'+RC.open+'"><b>📖 추천 목록</b><span>군포시도서관·국립도서관 추천도서와 군포 인기·신착에서 골라 바로 찾기</span><i>'+(RC.open?'닫기 ▴':'보기 ▾')+'</i></button>';
   if(RC.open){h+='<div class="cplpane rcpane"><div class="rctabs" role="tablist">'+RC_TABS.map(function(t){return '<button type="button" role="tab" data-rct="'+t[0]+'" aria-selected="'+(RC.tab===t[0])+'"'+(RC.tab===t[0]?' class="on"':'')+'>'+t[1]+'</button>';}).join('')+'</div>';
-    var L=RC.L[RC.tab];
+    var L0=RC.L[RC.tab],L=rcView();
+    if(L0&&RC_SUB[RC.tab])h+='<div class="rcsub">'+RC_SUB[RC.tab].map(function(x){return '<button type="button" data-rcs="'+x[0]+'"'+(RC.sub===x[0]?' class="on"':'')+'>'+x[1]+'</button>';}).join('')+'</div>';
     if(!L)h+='<p class="rcmsg">'+(RC.busy==='err'?'목록을 받지 못했어요. 잠시 뒤 다시 눌러 주세요.':'군포시도서관에서 목록 받는 중…')+'</p>';
     else if(!L.books.length)h+='<p class="rcmsg">이 목록에 책이 아직 없어요.</p>';
     else{h+='<p class="rcname">'+esc(L.name)+' · '+L.books.length+'권 · 골라서 찾기(20권까지)</p><ul class="rcl">'+L.books.slice(0,RC.shown).map(function(b,i){var k=rcKey(b),on=!!RC.sel[k];
-        return '<li><label'+(on?' class="on"':'')+'><input type="checkbox" data-rck="'+esc(k)+'" data-rci="'+i+'"'+(on?' checked':'')+'>'+(b.c?'<img src="'+esc(b.c)+'" alt="" loading="lazy" referrerpolicy="no-referrer">':'<span class="noimg"></span>')+'<span class="rt"><b>'+esc(b.t)+'</b><small>'+esc([b.a,b.y].filter(Boolean).join(' · '))+'</small></span></label></li>';}).join('')+'</ul>';
+        return '<li><label'+(on?' class="on"':'')+'><input type="checkbox" data-rck="'+esc(k)+'" data-rci="'+i+'"'+(on?' checked':'')+'>'+(b.c?'<img src="'+esc(b.c)+'" alt="" loading="lazy" referrerpolicy="no-referrer">':'<span class="noimg"></span>')+'<span class="rt"><b>'+esc(b.t)+'</b><small>'+esc([b.a,b.y,b.m?b.m+(b.g?' '+b.g:''):''].filter(Boolean).join(' · '))+'</small></span></label></li>';}).join('')+'</ul>';
       if(L.books.length>RC.shown)h+='<button type="button" class="rcmore" id="rcmore">더 보기 ('+(L.books.length-RC.shown)+'권)</button>';}
     h+='<div class="rcgo"><button type="button" class="btn" id="rcall"'+(L&&L.books.length?'':' disabled')+'>앞에서 20권 모두</button><button type="button" class="btn pri" id="rcfind"'+(n?'':' disabled')+'>고른 '+n+'권 찾기</button></div></div>';}
   el.innerHTML=h;}
-function rcShow(tab){if(RC.tab!==tab)RC.sel={};RC.tab=tab;RC.shown=30;RC.busy=false;rcRender();if(RC.L[tab])return;var my=tab;rcLoad(tab).then(function(){if(RC.tab===my)rcRender();},function(e){try{console.warn('추천 목록',e);}catch(x){}if(RC.tab===my){RC.busy='err';rcRender();}});}
+function rcView(){var L=RC.L[RC.tab];if(!L||!RC.sub)return L;return {name:L.name,books:L.books.filter(function(b){return b.g===RC.sub;})};}
+function rcShow(tab){if(RC.tab!==tab){RC.sel={};RC.sub='';}RC.tab=tab;RC.shown=30;RC.busy=false;rcRender();if(RC.L[tab])return;var my=tab;rcLoad(tab).then(function(){if(RC.tab===my)rcRender();},function(e){try{console.warn('추천 목록',e);}catch(x){}if(RC.tab===my){RC.busy='err';rcRender();}});}
 function rcGo(books){books=books.slice(0,MAXBOOKS);if(!books.length)return;
-  var lines=books.map(function(b){if(!b.i)return b.t;var x=b.t+' [ISBN '+b.i+']';return prep(x).trim()?x:b.i;});
+  var lines=books.map(function(b){if(!b.i)return b.a?b.t+' / '+b.a:b.t;var x=b.t+' [ISBN '+b.i+']';return prep(x).trim()?x:b.i;});
   ta.value=lines.join('\n');lastLen=ta.value.length;grow();msg('');books.forEach(function(b){if(b.i&&b.t)S.hint[b.i]=b.t;});
   RC.open=false;RC.sel={};rcRender();cplSet(null);run(true);render();ta.blur();toResults();}
 document.addEventListener('click',function(e){var t=e.target;if(!t.closest||!t.closest('#rec'))return;
   if(t.closest('#rcbar')){RC.open=!RC.open;if(RC.open)rcShow(RC.tab);else rcRender();return;}
   var tb=t.closest('[data-rct]');if(tb){rcShow(tb.getAttribute('data-rct'));return;}
   if(t.closest('#rcmore')){RC.shown+=30;rcRender();return;}
-  var L=RC.L[RC.tab];if(!L)return;
+  var sb=t.closest('[data-rcs]');if(sb){RC.sub=sb.getAttribute('data-rcs');RC.shown=30;rcRender();return;}
+  var L=rcView(),LA=RC.L[RC.tab];if(!L)return;
   if(t.closest('#rcall')){rcGo(L.books);return;}
-  if(t.closest('#rcfind')){rcGo(L.books.filter(function(b){return RC.sel[rcKey(b)];}));return;}});
+  if(t.closest('#rcfind')){rcGo(LA.books.filter(function(b){return RC.sel[rcKey(b)];}));return;}});
 document.addEventListener('change',function(e){var c=e.target;if(!c.matches||!c.matches('#rec input[data-rck]'))return;var k=c.getAttribute('data-rck');
   if(c.checked){if(Object.keys(RC.sel).length>=MAXBOOKS){c.checked=false;msg('추천 목록에서는 한 번에 '+MAXBOOKS+'권까지 고를 수 있어요.');return;}RC.sel[k]=1;}else delete RC.sel[k];
   var lb=c.closest('label');if(lb)lb.classList.toggle('on',c.checked);var n=Object.keys(RC.sel).length,f=$('rcfind');if(f){f.disabled=!n;f.textContent='고른 '+n+'권 찾기';}});
