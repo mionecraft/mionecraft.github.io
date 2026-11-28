@@ -774,12 +774,12 @@ function cplLoad(){if(!window.fetch)return Promise.resolve();
     var e=j.ev||{},L=j.lists.map(cplClean).filter(Boolean),fm=cplFix(e.form);
     L.sort(function(a,b){return String(b.at).localeCompare(String(a.at));});   // 새로 실린 목록 먼저(휴대폰 횟수는 상에 쓰지 않아 섞지 않음)
     CP.data={lists:L,ev:{from:CPL_DAY.test(e.from||'')?e.from:'',to:CPL_DAY.test(e.to||'')?e.to:'',full:!!e.full,limit:Math.max(1,Math.min(9999,+e.limit||100)),
-      form:/^https:\/\/[^\s<>"']+$/.test(fm)?fm:''}};
+      form:/^https:\/\/[^\s<>"']+$/.test(fm)?fm:'',share:(function(x){x=cplFix(x);return /^https:\/\/[^\s<>"']+$/.test(x)?x:'';})(e.share)}};
     CP.order=L;cplHints();render();}).catch(function(){});}
 // QR·링크로 연 목록(ISBN만 담김)은 목록 파일에서 책 이름을 채움
 function cplHints(){var c=S.cpl&&cplById(S.cpl.id);if(!c)return;c.books.forEach(function(b){if(b.i&&b.t&&!S.hint[b.i])S.hint[b.i]=b.t;});}
-function cplEv(){var e=CP.data&&CP.data.ev;if(!e||!e.form)return{share:false};var d=kToday(),inEv=!!(e.from&&e.to&&e.from<=d&&d<=e.to);
-  return{share:true,inEv:inEv,coupon:inEv&&!e.full,full:inEv&&e.full,form:e.form,limit:e.limit};}
+function cplEv(){var e=CP.data&&CP.data.ev;if(!e)return{share:false};var d=kToday(),inEv=!!(e.from&&e.to&&e.from<=d&&d<=e.to),cpn=inEv&&!e.full,f=cpn?e.form:e.share;if(!f)return{share:false};
+  return{share:true,inEv:inEv,coupon:cpn,full:inEv&&e.full,form:f,limit:e.limit};}
 
 /* 「책플리」 칸 */
 function cplPanel(){var el=$('cpl');if(!el)return;if(!CP.data||!CP.data.lists.length){el.hidden=true;el.innerHTML='';return;}el.hidden=false;
@@ -849,14 +849,14 @@ function cplDraw(j,pub){var el=$('cplshare'),v=CP.view,E=cplEv(),n=S.qs.length,h
       '<div class="note">이름·전화번호는 쓰지 마세요. 사서가 확인한 뒤 「시민 책플리」·게시판·SNS·전시에 실릴 수 있고, '+lab+'를 알려 주시면 언제든 내려 드려요. 신청서는 직접 [제출]을 눌러야 보내져요.</div>';}
   else if(v.mode==='done'){var L=v.list,f=E.form,url=cplForm(L.no,L.name,L.bs);
     var cp=E.coupon?'사서가 목록을 확인해 실으면(주 1회) 선착순 '+E.limit+'명에게 커피 쿠폰을 보내 드려요.':E.full?'커피 쿠폰은 마감됐어요. 목록은 사서가 확인한 뒤 「시민 책플리」에 실려요.':'목록은 사서가 확인한 뒤 「시민 책플리」에 실려요.';
-    var st='<li>열린 신청서에서 '+(E.inEv?'휴대폰 번호·개인정보 동의를 넣고 ':'')+'<b>[제출]</b>을 눌러야 끝나요.</li>'+
+    var st='<li>열린 신청서에서 '+(E.coupon?'휴대폰 번호·개인정보 동의를 넣고 ':'')+'<b>[제출]</b>을 눌러야 끝나요.</li>'+
       (f.indexOf('{번호}')<0?'<li>신청서 「'+lab+'」 칸에 위 번호를 써 주세요.</li>':'')+
       (f.indexOf('{이름}')<0?'<li>신청서 「목록 이름」 칸에 이 이름을 써 주세요: 「'+esc(L.name)+'」</li>':'')+
       (f.indexOf('{책}')<0?'<li>책 목록을 복사해 두었어요. 신청서 「책 목록」 칸을 길게 눌러 붙여 넣어 주세요. <button type="button" class="mini" data-cs="copy">다시 복사</button><textarea class="cbk" readonly rows="3">'+esc(cplBookTxt(L.bs))+'</textarea></li>':'');
     h='<div class="cr"><b>'+(v.dup?'📋 이 휴대폰에서 나눈 목록이에요 · 「'+esc(L.name)+'」('+L.bs.length+'권)':'🎉 「'+esc(L.name)+'」('+L.bs.length+'권)을 나눠 주셔서 고맙습니다')+'</b><button type="button" class="x" data-cs="x" aria-label="닫기">✕</button></div>'+
       '<div class="nobox"><span class="sm">'+lab+'</span><span class="cpn">'+esc(L.no)+'</span></div><div class="cpm">'+cp+'</div><ol class="steps">'+st+'</ol>'+
       '<a class="go" href="'+esc(url)+'" target="_blank" rel="noopener">신청서 '+(v.dup?'열기':'다시 열기')+' ↗</a>'+
-      '<div class="sm lock">🔒 휴대폰 번호는 북원첵이 아니라 신청서에만 넣어요 · '+lab+'는 화면을 찍어 두세요('+(E.inEv?'「많이 쓰인 책플리」 발표 때와 ':'')+'목록을 내릴 때 필요해요)</div>';}
+      '<div class="sm lock">'+(E.coupon?'🔒 휴대폰 번호는 북원첵이 아니라 신청서에만 넣어요 · ':'')+lab+'는 화면을 찍어 두세요('+(E.inEv?'「많이 쓰인 책플리」 발표 때와 ':'')+'목록을 내릴 때 필요해요)</div>';}
   var cls='cpls m-'+v.mode;if(el.className===cls&&el.__h===h)return;   // 같은 내용이면 다시 그리지 않음
   el.className=cls;el.innerHTML=h;el.__h=h;
   var inp=$('cplName');if(inp){inp.value=v.name||'';cplCheck();}}
@@ -1027,16 +1027,62 @@ function rmLines(c){var W=c.width,H=c.height,x=c.getContext('2d',{willReadFreque
     if(bw>W*0.12||bh>H*0.06||(bw>W*0.04&&px.length<bw*bh*0.08)){big++;for(var j=0;j<px.length;j++){var q=px[j];a[q*4]=a[q*4+1]=a[q*4+2]=255;}}}
   x.putImageData(d,0,0);return big;}
 function rec(w,c){return w.recognize(c).then(function(o){return {W:c.width,H:c.height,lines:(o.data.lines||[]).map(function(l){return {c:l.confidence,b:l.bbox,w:l.words.map(function(x){return {t:x.text,c:x.confidence,b:x.bbox};})};})};});}
+// 표(엑셀·한글 표를 화면째 찍은 사진): 가로·세로 줄을 찾아 가장 넓은 열(보통 서명)만 오려 줄을 지운 흑백으로. 줄 위치(행 경계)도 돌려줌
+// 모니터 물결무늬는 이웃 평균으로 흐리게 함. 표가 아니면 null
+function grid(bm){var w=bm.width,h=bm.height,L=Math.max(w,h),s=L>2000?2000/L:L<1000?Math.min(2,1000/L):1,W=Math.round(w*s),H=Math.round(h*s);
+  var c=document.createElement('canvas');c.width=W;c.height=H;var x=c.getContext('2d',{willReadFrequently:true});x.drawImage(bm,0,0,W,H);
+  var d=x.getImageData(0,0,W,H),a=d.data,n=W*H,g=new Float32Array(n),i,yy,xx;for(i=0;i<n;i++)g[i]=(a[i*4]*299+a[i*4+1]*587+a[i*4+2]*114)/1000;
+  // 물결무늬 지우기: 가로·세로로 이웃 평균(반지름 1)을 두 번 → 반으로 줄였다 늘린 것과 비슷
+  var tmp=new Float32Array(n);for(var pass=0;pass<2;pass++){for(yy=0;yy<H;yy++)for(xx=0;xx<W;xx++){i=yy*W+xx;tmp[i]=(g[i-(xx>0?1:0)]+g[i]+g[i+(xx<W-1?1:0)])/3;}
+    for(yy=0;yy<H;yy++)for(xx=0;xx<W;xx++){i=yy*W+xx;g[i]=(tmp[i-(yy>0?W:0)]+tmp[i]+tmp[i+(yy<H-1?W:0)])/3;}}
+  var r=Math.max(8,Math.round(L*s/130)),I=new Float64Array((W+1)*(H+1)),b=new Uint8Array(n);
+  for(yy=0;yy<H;yy++){var rs=0;for(xx=0;xx<W;xx++){rs+=g[yy*W+xx];I[(yy+1)*(W+1)+xx+1]=I[yy*(W+1)+xx+1]+rs;}}
+  for(yy=0;yy<H;yy++){var y0=Math.max(0,yy-r),y1=Math.min(H,yy+r+1);for(xx=0;xx<W;xx++){var x0=Math.max(0,xx-r),x1=Math.min(W,xx+r+1);
+    var m=(I[y1*(W+1)+x1]-I[y0*(W+1)+x1]-I[y1*(W+1)+x0]+I[y0*(W+1)+x0])/((x1-x0)*(y1-y0));b[yy*W+xx]=g[yy*W+xx]<m*0.9?1:0;}}
+  var hm=new Uint8Array(n),vm=new Uint8Array(n),LH=Math.round(W*0.06),LV=Math.round(H*0.04),st;
+  for(yy=0;yy<H;yy++){st=-1;for(xx=0;xx<=W;xx++){var on=xx<W&&b[yy*W+xx];if(on&&st<0)st=xx;else if(!on&&st>=0){if(xx-st>=LH)for(var k=st;k<xx;k++)hm[yy*W+k]=1;st=-1;}}}
+  for(xx=0;xx<W;xx++){st=-1;for(yy=0;yy<=H;yy++){var on2=yy<H&&b[yy*W+xx];if(on2&&st<0)st=yy;else if(!on2&&st>=0){if(yy-st>=LV)for(var k2=st;k2<yy;k2++)vm[k2*W+xx]=1;st=-1;}}}
+  var hp=new Float32Array(H),vp=new Float32Array(W);for(yy=0;yy<H;yy++)for(xx=0;xx<W;xx++){if(hm[yy*W+xx])hp[yy]++;if(vm[yy*W+xx])vp[xx]++;}
+  var sm=function(p,k,dv){var o=new Float32Array(p.length),h2=k>>1;for(var q=0;q<p.length;q++){var z=0;for(var e=q-h2;e<=q+h2;e++)if(e>=0&&e<p.length)z+=p[e];o[q]=z/dv;}return o;};
+  var pk=function(p,thr,gap){var out=[],cur=null;for(var q=0;q<p.length;q++)if(p[q]>=thr){if(cur&&q-cur[cur.length-1]<=gap)cur.push(q);else{cur=[q];out.push(cur);}}return out.map(function(v){return Math.round((v[0]+v[v.length-1])/2);});};
+  var hs=pk(sm(hp,5,W),0.15,8),vs=pk(sm(vp,15,H),0.15,12);if(hs.length<6||vs.length<2)return null;
+  // 세로줄 후보 검사: 진짜 열 줄은 행(가로줄 사이) 네 곳 중 한 곳 이상에서 칸 높이의 70% 넘게 이어짐(사진이 기울어 끊기는 것 감안). 못 미치면 버림
+  vs=vs.filter(function(vx){var ok=0,nb=0;for(var q=0;q+1<hs.length;q++){var ya=hs[q]+3,yb=hs[q+1]-3;if(yb-ya<8)continue;nb++;var cov=0;
+      for(var y2=ya;y2<yb;y2++){for(var x2=Math.max(0,vx-7);x2<=Math.min(W-1,vx+7);x2++)if(b[y2*W+x2]){cov++;break;}}if(cov>=(yb-ya)*0.7)ok++;}return nb&&ok>=nb*0.25;});
+  if(vs.length<2)return null;
+  var bx=null;for(i=0;i+1<vs.length;i++)if(!bx||vs[i+1]-vs[i]>bx[1]-bx[0])bx=[vs[i],vs[i+1]];if(bx[1]-bx[0]<W*0.3)return null;
+  var X0=Math.max(0,bx[0]-6),X1=Math.min(W,bx[1]-3),CW=X1-X0,o=document.createElement('canvas');o.width=CW;o.height=H;var ox=o.getContext('2d'),od=ox.createImageData(CW,H),oa=od.data;
+  var hit=function(M,q,dq){return M[q]||M[q-dq]||M[q+dq];};
+  for(yy=0;yy<H;yy++)for(xx=X0;xx<X1;xx++){i=yy*W+xx;var blk=b[i]&&!(yy>0&&yy<H-1&&hit(hm,i,W))&&!(xx>0&&xx<W-1&&hit(vm,i,1)),j=(yy*CW+xx-X0)*4;oa[j]=oa[j+1]=oa[j+2]=blk?0:255;oa[j+3]=255;}
+  ox.putImageData(od,0,0);return {c:o,rows:hs,cols:vs,x:[X0,X1]};}
+// 표 열을 읽은 줄을 행(가로줄 사이)마다 모아 한 칸 = 한 권. 두 줄 칸은 합치고, 부제(「 : 」 뒤)는 뺌. 머리 칸(서명 등)·글자 적은 칸은 버림
+function pickTable(o,rows){var cell={},key=[];(o.lines||[]).forEach(function(l){var t=l.w.filter(function(x){return x.c>=30;}).map(function(x){return x.t;}).join(' ').trim();if(!t)return;
+    var yc=(l.b.y0+l.b.y1)/2,k=0;for(var q=0;q<rows.length;q++)if(rows[q]<yc)k++;if(!cell[k]){cell[k]=[];key.push(k);}cell[k].push(t);});
+  var out=[],seen={};key.sort(function(p,q){return p-q;}).forEach(function(k){var t=cell[k].join(' ');
+    t=t.replace(/(^|\s)((?:[가-힣] ){2,}[가-힣])(?=\s|$)/g,function(m,sp,run){return sp+run.replace(/ /g,'');});
+    var sg=t.split(/\s*[|｜]\s*/);t=sg.filter(function(z){return (z.match(/[가-힣]/g)||[]).length>=2;})[0]||sg[0];
+    t=t.split(/\s+[:;：]\s*|\s*[:：]\s+/)[0].replace(/^[\s|_\-—~.,、ㆍ'"{}\[\]]+|[\s|_\-—~.,、ㆍ'"{}\[\]]+$/g,'').replace(/\s{2,}/g,' ');
+    // 한글 제목 앞뒤에 붙은 짧은 영문 조각(줄·얼룩을 잘못 읽은 것) 떼기
+    var tk=t.split(' '),hg=function(z){return (z.match(/[가-힣]/g)||[]).length;},al=function(z){return /^[A-Za-z]{1,4}[.,)]?$/.test(z);};
+    if(hg(t)>=4){while(tk.length>1&&al(tk[tk.length-1]))tk.pop();while(tk.length>1&&al(tk[0]))tk.shift();t=tk.join(' ');}
+    if(/^(서\s*명|도\s*서\s*명|자\s*료\s*명|책\s*제\s*목|제\s*목)(\s|$)/.test(t))return;
+    var hc=(t.match(/[가-힣]/g)||[]).length,lc=(t.match(/[A-Za-z]/g)||[]).length,jc=(t.match(/[ぁ-ヿ一-龥]/g)||[]).length;
+    if(hc<2&&lc<4&&jc<2)return;if(hc&&hc<3&&lc>hc)return;if(/^(서\s*명|도\s*서\s*명|자\s*료\s*명|책\s*제\s*목|제\s*목)$/.test(t))return;var z=t.replace(/\s+/g,'');if(seen[z])return;seen[z]=1;
+    out.push({t:t,a:'',why:'table',c:70});});out.mode='table';return out;}
 // 1) 가로 글씨 그대로 → 2) 세 권보다 적으면 그늘 지운 흑백으로 다시 → 2-1) 서식(슬립·신청서: 「서명」「신청자」「청구기호」 칸)으로 보이면 표 테두리를 지우고 다시 → 3) 하나도 없으면 세로 글씨(책등)로
 function read(file,prog){var step=function(t){if(prog)prog(t);};var bm;step('글자 읽기 준비 중(처음 한 번은 약 9MB 받음)');
   return Promise.all([worker('kor+eng','4',function(st,p){if(/loading/.test(st)&&p<1)step('글자 읽기 자료 받는 중(처음 한 번만, 약 9MB) '+Math.round(p*100)+'%');}),bitmap(file)]).then(function(r){bm=r[1];step('사진에서 글자 읽는 중');return rec(r[0],prep(bm,false));})
-  .then(function(o1){var b1=OCRP.pick(o1);if(b1.length>=3||b1.mode==='store'||b1.mode==='form')return {books:b1,pass:1};step('한 번 더 읽는 중');
+  .then(function(o1){var b1=OCRP.pick(o1);if(b1.mode==='store'||b1.mode==='form')return {books:b1,pass:1};
+    // 1-1) 처음 읽기로 세 권이 안 되고, 서식 낌새(서명·신청자·청구기호 등 두 줄 이상)가 없고 표(가로줄 여섯 개 이상·세로줄 둘 이상)로 보이면 가장 넓은 열만 줄 지우고 읽기(엑셀 화면 사진 등)
+    var gd=b1.length>=3||OCRP.formHint(o1)>=2?null:grid(bm);
+    return (gd?(step('표의 서명 칸만 읽는 중'),worker('kor+eng','4').then(function(w){return rec(w,gd.c);}).then(function(o6){var b6=pickTable(o6,gd.rows);return b6.length>=3&&b6.length>=b1.length*0.6?{books:b6,pass:6}:null;})):Promise.resolve(null))
+    .then(function(t6){if(t6)return t6;if(b1.length>=3)return {books:b1,pass:1};step('한 번 더 읽는 중');
     return worker('kor+eng','4').then(function(w){return rec(w,prep(bm,true)).then(function(o2){var b2=OCRP.pick(o2),best=b2.length>b1.length?{books:b2,pass:2}:{books:b1,pass:1};
       if(b2.mode==='form'||OCRP.formHint(o1)+OCRP.formHint(o2)<2)return best;
-      step('표 칸을 지우고 다시 읽는 중');var c3=prep(bm,true);rmLines(c3);return rec(w,c3).then(function(o4){var b4=OCRP.pick(o4);return b4.mode==='form'&&b4.length?{books:b4,pass:4}:best;});});})
+      step('표 칸을 지우고 다시 읽는 중');var c3=prep(bm,true);rmLines(c3);return rec(w,c3).then(function(o4){var b4=OCRP.pick(o4);return b4.mode==='form'&&b4.length?{books:b4,pass:4}:best;});});});})
     .then(function(best){if(best.books.length)return best;step('세로 글씨로 읽는 중');
       return worker('kor_vert','3').then(function(w){return rec(w,prep(bm,false));}).then(function(o3){return {books:OCRP.pickVert(o3),pass:3};});});});}
-return {read:read,prep:prep,worker:worker};})();
+return {read:read,prep:prep,worker:worker,grid:grid,pickTable:pickTable};})();
 
 /* ── 사진으로 넣기 (0.8.2: 표 칸 서식(슬립) 읽기, 이미 넣은 책은 다시 안 넣음 / 0.8.3: 아이폰 붙여넣기 안내) ──
    서점·도서관 화면 캡처나 책 목록 사진을 고르면 이 브라우저 안에서 글자를 읽어(Tesseract.js) 「제목 / 저자」 줄로 입력칸에 채우고 바로 찾음.
